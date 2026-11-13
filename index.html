@@ -3,29 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Duck Race Quiz</title>
+  <title>Quacks in Kahoots!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
       --paper: #f2efe8;
       --panel-paper: #fbf9f4;
+      --field: #fffefa;
       --panel-border: #d3cfc5;
+      --panel-border-strong: #b5b0a4;
       --royal-blue: #1738e8;
       --royal-blue-hover: #102bb9;
+      --royal-blue-tint: #e6eafd;
       --ink: #171717;
+      --ink-soft: #4b4a46;
+      --placeholder: #74716a;
       --sun-yellow: #f7cb35;
+      --danger: #b42318;
+      --danger-tint: #fdecea;
+      --online: #1a7f37;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --font-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+      --font-body: "Figtree", system-ui, sans-serif;
+      color-scheme: light;
+      accent-color: var(--royal-blue);
     }
-    body { background: var(--paper); color: var(--ink); }
-    .race-panel { background: var(--panel-paper); border-color: var(--panel-border); }
-    .race-title { color: var(--royal-blue); }
-    .race-question { color: var(--royal-blue); }
-    canvas { background: var(--paper); border-radius: 12px; }
-    canvas.race-track { border-color: var(--royal-blue); }
-    .race-choice { background: var(--royal-blue); border-color: var(--royal-blue); color: #fff; }
-    .race-choice:hover:not(:disabled) { background: var(--royal-blue-hover); }
-    .race-choice:focus-visible { outline: 3px solid var(--sun-yellow); outline-offset: 2px; }
-    .race-choice.correct { background: var(--sun-yellow); border-color: var(--royal-blue); color: var(--ink); }
-    .race-choice:disabled { cursor: default; opacity: .82; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .display { font-family: var(--font-display); letter-spacing: -0.01em; text-wrap: balance; }
+    ::selection { background: var(--sun-yellow); color: var(--ink); }
+    input, textarea, select { caret-color: var(--royal-blue); }
+    :focus-visible { outline: 3px solid var(--royal-blue); outline-offset: 2px; }
+
+    .panel {
+      background: var(--panel-paper);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(23, 23, 23, .04), 0 10px 24px -14px rgba(23, 23, 23, .18);
+    }
+    .muted { color: var(--ink-soft); }
+    #question-text:empty, #status-text:empty, #choices-grid:empty { display: none; }
+
+    /* Brand */
+    .brand { color: var(--royal-blue); font-weight: 800; }
+
+    /* Connection indicator */
+    .connection { display: inline-flex; align-items: center; gap: .5rem; font-size: .875rem; font-weight: 600; color: var(--ink-soft); }
+    .connection::before { content: ""; width: .5rem; height: .5rem; border-radius: 999px; background: var(--panel-border-strong); }
+    .connection[data-state="connected"]::before { background: var(--online); }
+    .connection[data-state="connecting"]::before { background: var(--sun-yellow); box-shadow: 0 0 0 1px #b8901a; }
+    .connection[data-state="offline"]::before { background: var(--danger); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+      min-height: 48px; padding: .75rem 1.25rem; border-radius: 12px; border: 2px solid transparent;
+      font-weight: 700; line-height: 1.2; cursor: pointer; touch-action: manipulation;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 160ms var(--ease-out);
+    }
+    .btn:active:not(:disabled) { transform: scale(.97); }
+    .btn:disabled { cursor: not-allowed; opacity: .5; }
+    .btn-primary { background: var(--royal-blue); color: #fff; }
+    .btn-secondary { background: transparent; color: var(--royal-blue); border-color: var(--royal-blue); }
+    .btn-quiet-danger { min-height: 40px; padding: .5rem .875rem; background: transparent; color: var(--danger); border-color: #e7c3be; font-size: .875rem; }
+    @media (hover: hover) and (pointer: fine) {
+      .btn-primary:hover:not(:disabled) { background: var(--royal-blue-hover); }
+      .btn-secondary:hover:not(:disabled) { background: var(--royal-blue-tint); }
+      .btn-quiet-danger:hover:not(:disabled) { background: var(--danger-tint); border-color: var(--danger); }
+    }
+
+    /* Fields */
+    .label { display: block; margin-bottom: .375rem; font-size: .875rem; font-weight: 600; }
+    .field {
+      width: 100%; padding: .75rem .875rem; border-radius: 12px; font-size: 1rem; color: var(--ink);
+      background: var(--field); border: 1px solid var(--panel-border-strong);
+      transition: border-color 150ms ease;
+    }
+    .field::placeholder { color: var(--placeholder); }
+    .field[aria-invalid="true"] { border-color: var(--danger); }
+    .pin-field { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; letter-spacing: .25em; text-align: center; font-variant-numeric: tabular-nums; }
+    .field-error { margin-top: .375rem; color: var(--danger); font-size: .8125rem; font-weight: 500; text-align: left; }
+    .field-error:empty { display: none; }
+
+    /* Host disclosure */
+    .disclosure > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .disclosure > summary::-webkit-details-marker { display: none; }
+    .disclosure > summary::after {
+      content: ""; width: .625rem; height: .625rem; flex-shrink: 0; margin-right: .25rem;
+      border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translateY(-2px); transition: transform 200ms var(--ease-out);
+    }
+    .disclosure[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+
+    /* Game status bar */
+    .stat-label { display: block; font-size: .75rem; font-weight: 600; color: var(--ink-soft); }
+    .stat-value { font-family: var(--font-display); font-weight: 600; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+    .pin-value { font-family: var(--font-display); font-weight: 800; font-size: 1.75rem; line-height: 1.1; color: var(--royal-blue); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+
+    /* Track */
+    canvas.race-track { background: var(--paper); border: 2px solid var(--royal-blue); border-radius: 16px; box-shadow: 0 12px 28px -18px rgba(23, 56, 232, .45); }
+
+    /* Countdown */
+    .countdown {
+      display: inline-block; padding: .25rem .75rem; border-radius: 999px;
+      background: var(--royal-blue-tint); color: var(--royal-blue);
+      font-family: var(--font-display); font-weight: 600; font-size: 1rem; font-variant-numeric: tabular-nums;
+      transition: background-color 200ms ease, color 200ms ease;
+    }
+    .countdown.urgent { background: var(--danger-tint); color: var(--danger); }
+
+    /* Answer tiles */
+    .race-choice {
+      display: flex; align-items: center; gap: .75rem; min-height: 64px; padding: .875rem 1rem;
+      text-align: left; font-weight: 600; font-size: 1.0625rem; line-height: 1.3;
+      background: var(--royal-blue); color: #fff; border: 2px solid var(--royal-blue); border-radius: 14px;
+      transition: background-color 150ms ease, opacity 200ms ease, box-shadow 200ms ease, transform 160ms var(--ease-out);
+      touch-action: manipulation;
+    }
+    button.race-choice { cursor: pointer; }
+    button.race-choice:active:not(:disabled) { transform: scale(.97); }
+    .race-choice:disabled { cursor: default; }
+    .race-choice:disabled:not(.picked), .race-choice.dim { opacity: .5; }
+    .race-choice.picked { box-shadow: 0 0 0 3px var(--panel-paper), 0 0 0 5px var(--ink); }
+    .race-choice.correct { background: var(--sun-yellow); color: var(--ink); opacity: 1; animation: correct-pop 360ms var(--ease-out); }
+    @media (hover: hover) and (pointer: fine) {
+      button.race-choice:hover:not(:disabled) { background: var(--royal-blue-hover); }
+    }
+    .choice-marker {
+      display: inline-grid; place-items: center; flex-shrink: 0; width: 1.75rem; height: 1.75rem; border-radius: 999px;
+      font-family: var(--font-display); font-weight: 800; font-size: .875rem;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, .95);
+    }
+    .choice-text { min-width: 0; overflow-wrap: anywhere; }
+    .choice-tag {
+      margin-left: auto; flex-shrink: 0; padding: .125rem .5rem; border-radius: 999px;
+      font-size: .75rem; font-weight: 700; background: rgba(255, 255, 255, .2);
+    }
+    .race-choice.correct .choice-tag { background: rgba(23, 23, 23, .1); }
+
+    /* Lists */
+    .player-chip { padding: .25rem .75rem; border-radius: 999px; background: var(--royal-blue-tint); color: var(--royal-blue); font-weight: 600; font-size: .875rem; overflow-wrap: anywhere; }
+    .share-link { min-width: 0; flex: 1; padding: .625rem .75rem; border-radius: 10px; background: var(--field); border: 1px dashed var(--panel-border-strong); font-size: .9375rem; overflow-wrap: anywhere; user-select: all; }
+    .board-row { display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: .75rem; padding: .625rem .75rem; border-radius: 10px; }
+    .board-row + .board-row { border-top: 1px solid var(--panel-border); border-top-left-radius: 0; border-top-right-radius: 0; }
+    .board-row.is-you { background: var(--royal-blue-tint); }
+    .board-rank { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; font-weight: 700; font-size: .875rem; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+    .board-row:first-child .board-rank { background: var(--sun-yellow); color: var(--ink); }
+    .board-name { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+    .board-score { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .you-tag { margin-left: .375rem; font-size: .75rem; font-weight: 700; color: var(--royal-blue); }
+
+    /* Motion */
+    .screen { animation: rise 320ms var(--ease-out) both; }
+    .is-final .board-row { animation: rise 360ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 50ms); }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+    @keyframes fade { from { opacity: 0; } }
+    @keyframes correct-pop { 0% { transform: scale(.97); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
     .loading-spinner {
       width: 1rem;
       height: 1rem;
@@ -37,80 +177,128 @@
     @keyframes loading-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) {
       .loading-spinner { animation-duration: 1.8s; }
+      .screen, .is-final .board-row { animation-name: fade; animation-duration: 200ms; }
+      .race-choice.correct { animation: none; }
+      .btn:active:not(:disabled), button.race-choice:active:not(:disabled) { transform: none; }
     }
-    input { background: #fffefa; border: 1px solid var(--panel-border); }
-    #entry-error, .field-error { color: #b91c1c; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-dvh flex flex-col items-center px-4 py-6 sm:py-10">
   <main class="max-w-2xl w-full space-y-4">
-    <header class="race-panel p-4 rounded-xl border flex justify-between items-center">
-      <h1 class="race-title text-xl font-bold">🦆 Duck Race Quiz</h1>
-      <span id="connection" class="text-sm font-semibold">Not connected</span>
+    <header class="flex flex-wrap justify-between items-center gap-3 px-1">
+      <h1 class="brand flex items-center gap-2.5 text-2xl sm:text-3xl">
+        <svg class="shrink-0" viewBox="0 0 32 32" width="36" height="36" aria-hidden="true">
+          <path d="M5 19.5c0-2.2 1.7-3.5 3.9-3.5h4.4a5.8 5.8 0 1 1 9-2.2c3 .5 6.1 1.8 7.2 4 .3 5-4.3 8.7-12 8.7h-5C8.4 26.5 5 23.6 5 19.5z" fill="var(--royal-blue)"/>
+          <path d="M22.2 9.6 28 11l-5.6 2.2z" fill="var(--sun-yellow)" stroke="#b8901a" stroke-width=".6" stroke-linejoin="round"/>
+          <circle cx="18.7" cy="10" r="1.4" fill="#fff"/>
+          <circle cx="19" cy="10.1" r=".6" fill="var(--ink)"/>
+          <path d="M12.5 20.5c2.2 1.6 5.4 1.8 8 .4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+        </svg>
+        Quacks in Kahoots!
+      </h1>
+      <span id="connection" class="connection hidden" data-state="idle" role="status"><span id="connection-text">Not connected</span></span>
     </header>
 
-    <section id="entry" class="race-panel p-6 rounded-xl border space-y-5 text-center">
-      <h2 class="race-question text-xl font-semibold">Join the preset Duck Race Quiz</h2>
-      <p class="text-sm">Players can join from any internet connection using the link and PIN, even after the quiz starts. If a question is underway, latecomers can answer if its timer is still running; otherwise, they join the next question.</p>
-      <div class="grid sm:grid-cols-2 gap-4">
-        <form id="host-form" class="race-panel border rounded-lg p-4 space-y-3">
-          <h3 class="font-bold">Host the preset quiz</h3>
-          <p class="text-sm">Enter the host key configured by the server to open the fixed quiz room.</p>
-          <input id="host-key-input" class="w-full p-3 rounded-lg text-slate-900" type="password" autocomplete="current-password" placeholder="Host key" aria-label="Host key" aria-describedby="host-key-error" required>
-          <p id="host-key-error" class="field-error text-xs text-left" role="alert"></p>
-          <button class="race-choice w-full p-3 rounded-lg border font-bold">Open host controls</button>
+    <section id="entry" class="screen space-y-4">
+      <form id="join-form" class="panel p-5 sm:p-7 space-y-4" novalidate>
+        <div class="space-y-1">
+          <h2 class="text-2xl font-extrabold">Join a game</h2>
+          <p class="muted text-sm">Enter the PIN on the host's screen and pick a nickname.</p>
+        </div>
+        <div>
+          <label class="label" for="pin-input">Game PIN</label>
+          <input id="pin-input" class="field pin-field" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="000000" aria-describedby="pin-error" required>
+          <p id="pin-error" class="field-error" role="alert"></p>
+        </div>
+        <div>
+          <label class="label" for="name-input">Nickname</label>
+          <input id="name-input" class="field" maxlength="20" autocomplete="nickname" placeholder="Up to 20 characters" aria-describedby="name-error" required>
+          <p id="name-error" class="field-error" role="alert"></p>
+        </div>
+        <button class="btn btn-primary w-full text-lg">Join game</button>
+        <p id="entry-error" class="field-error" role="alert"></p>
+        <p class="muted text-sm">Players can join from any internet connection using the link and PIN, even after the quiz starts. If a question is underway, latecomers can answer if its timer is still running; otherwise, they join the next question.</p>
+      </form>
+
+      <details class="disclosure panel px-5 sm:px-7 py-4">
+        <summary class="font-semibold min-h-[32px]">Hosting this quiz?</summary>
+        <form id="host-form" class="pt-4 space-y-3" novalidate>
+          <p class="muted text-sm">Enter the host key configured by the server to open the fixed quiz room.</p>
+          <div>
+            <label class="label" for="host-key-input">Host key</label>
+            <input id="host-key-input" class="field" type="password" autocomplete="current-password" aria-describedby="host-key-error" required>
+            <p id="host-key-error" class="field-error" role="alert"></p>
+          </div>
+          <button class="btn btn-secondary w-full">Open host controls</button>
         </form>
-        <form id="join-form" class="race-panel border rounded-lg p-4 space-y-3">
-          <h3 class="font-bold">Join a game</h3>
-          <input id="pin-input" class="w-full p-3 rounded-lg text-slate-900" inputmode="numeric" maxlength="6" placeholder="6-digit game PIN" aria-label="Game PIN" aria-describedby="pin-error" required>
-          <p id="pin-error" class="field-error text-xs text-left" role="alert"></p>
-          <input id="name-input" class="w-full p-3 rounded-lg text-slate-900" maxlength="20" placeholder="Your nickname" aria-label="Nickname" required>
-          <button class="race-choice w-full p-3 rounded-lg border font-bold">Join game</button>
-        </form>
-      </div>
-      <p id="entry-error" class="text-sm" role="alert"></p>
+      </details>
     </section>
 
-    <section id="game" class="hidden space-y-4 text-center">
-      <div class="race-panel p-4 rounded-xl border flex justify-between items-center">
-        <h2 class="font-bold">Game PIN: <span id="pin-label" class="race-question text-2xl"></span></h2>
-        <div class="text-sm font-semibold">
-          <span>Question: <span id="q-index">-</span></span> |
-          <span id="score-label" class="hidden">Score: <span id="score">0</span></span>
-          <span id="timer-label">Players: <span id="player-count">0</span></span>
+    <section id="game" class="screen hidden space-y-4 text-center">
+      <div class="panel px-5 py-3 flex flex-wrap justify-between items-center gap-x-6 gap-y-3 text-left">
+        <div>
+          <span class="stat-label">Game PIN</span>
+          <span id="pin-label" class="pin-value"></span>
         </div>
+        <dl class="flex gap-6">
+          <div><dt class="stat-label">Question</dt><dd id="q-index" class="stat-value">–</dd></div>
+          <div id="score-label" class="hidden"><dt class="stat-label">Score</dt><dd id="score" class="stat-value">0</dd></div>
+          <div><dt id="count-label" class="stat-label">Players</dt><dd id="count-value" class="stat-value">0</dd></div>
+        </dl>
       </div>
 
-      <canvas id="raceTrack" width="600" height="260" class="race-track w-full border-4 shadow-2xl"></canvas>
+      <canvas id="raceTrack" width="600" height="260" class="race-track w-full" role="img" aria-label="Race track with one lane per answer choice, A to D"></canvas>
 
-      <div class="race-panel p-6 rounded-xl border space-y-4">
-        <h2 id="phase-label" class="race-question text-xl font-bold"></h2>
-        <p id="question-text" class="text-lg font-medium"></p>
-        <div id="choices-grid" class="grid grid-cols-2 gap-3"></div>
-        <p id="status-text" class="text-sm" aria-live="polite"></p>
-        <div id="host-controls" class="hidden space-y-3">
-          <section id="question-manager" class="space-y-3 text-left">
-            <div>
-              <h3 class="font-bold">Manage questions</h3>
-              <p class="text-sm">Add, edit, or remove questions here. Changes are saved for future games and can only be made in the lobby.</p>
-            </div>
-            <div id="question-editor" class="space-y-3"></div>
-            <div class="flex flex-col sm:flex-row gap-2">
-              <button id="add-question-button" type="button" class="race-choice p-3 rounded-lg border font-bold">Add question</button>
-              <button id="save-questions-button" type="button" class="race-choice p-3 rounded-lg border font-bold">Save question changes</button>
-            </div>
-            <p id="question-save-status" class="text-sm" role="status" aria-live="polite"></p>
-          </section>
-          <div>
-            <h3 class="font-bold">Players</h3>
-            <ul id="players-list" class="text-sm"></ul>
+      <div class="panel p-5 sm:p-7 space-y-5">
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            <h2 id="phase-label" class="text-xl font-extrabold text-[color:var(--royal-blue)]"></h2>
+            <span id="countdown" class="countdown hidden"></span>
           </div>
-          <button id="start-button" class="race-choice p-3 rounded-lg border font-bold">Start game</button>
-          <button id="reset-button" class="hidden race-choice p-3 rounded-lg border font-bold">Reset quiz for a new group</button>
+          <p id="question-text" class="display text-2xl sm:text-[1.75rem] font-semibold leading-snug"></p>
         </div>
-        <div id="leaderboard" class="hidden">
-          <h3 class="font-bold">Leaderboard</h3>
-          <ol id="leaderboard-list" class="text-left text-sm max-w-sm mx-auto"></ol>
+        <div id="choices-grid" class="grid sm:grid-cols-2 gap-3"></div>
+        <p id="status-text" class="muted" aria-live="polite"></p>
+
+        <div id="host-controls" class="hidden space-y-5 text-left">
+          <div id="lobby-host" class="space-y-5">
+            <div>
+              <span class="stat-label mb-1.5">Players join at</span>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <span id="share-link" class="share-link"></span>
+                <button id="copy-link-button" type="button" class="btn btn-secondary shrink-0">Copy link</button>
+              </div>
+              <p id="copy-status" class="muted text-sm mt-1.5" role="status"></p>
+            </div>
+            <div>
+              <h3 class="font-bold mb-2">Players <span id="players-count" class="muted font-semibold"></span></h3>
+              <ul id="players-list" class="flex flex-wrap gap-2"></ul>
+              <p id="players-empty" class="muted text-sm">No players yet. Share the link and PIN; you can start once someone joins.</p>
+            </div>
+            <button id="start-button" class="btn btn-primary w-full text-lg">Start game</button>
+          </div>
+
+          <details id="question-manager" class="disclosure border-t border-[color:var(--panel-border)] pt-4">
+            <summary class="font-bold min-h-[32px]">
+              <span>Manage questions <span id="question-count" class="muted font-semibold"></span> <span id="unsaved-flag" class="hidden text-sm font-semibold text-[color:var(--danger)]">· Unsaved changes</span></span>
+            </summary>
+            <div class="pt-3 space-y-3">
+              <p class="muted text-sm">Add, edit, or remove questions here. Changes are saved for future games and can only be made in the lobby.</p>
+              <div id="question-editor" class="space-y-3"></div>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <button id="add-question-button" type="button" class="btn btn-secondary">Add question</button>
+                <button id="save-questions-button" type="button" class="btn btn-primary">Save question changes</button>
+              </div>
+              <p id="question-save-status" class="text-sm" role="status" aria-live="polite"></p>
+            </div>
+          </details>
+
+          <button id="reset-button" class="hidden btn btn-primary w-full">Reset quiz for a new group</button>
+        </div>
+
+        <div id="leaderboard" class="hidden text-left max-w-md mx-auto">
+          <h3 id="leaderboard-title" class="font-bold text-lg mb-2 text-center">Leaderboard</h3>
+          <ol id="leaderboard-list"></ol>
         </div>
       </div>
     </section>
@@ -118,10 +306,18 @@
 
   <script>
     const duckColors = ["#1738e8", "#f7cb35", "#222222", "#7890f5"];
+    const markerInk = ["#ffffff", "#171717", "#ffffff", "#171717"];
+    const choiceLetters = ["A", "B", "C", "D"];
+    const TRACK_WIDTH = 600;
+    const TRACK_HEIGHT = 260;
     const entry = document.getElementById("entry");
     const gamePanel = document.getElementById("game");
     const canvas = document.getElementById("raceTrack");
     const ctx = canvas.getContext("2d");
+    const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = TRACK_WIDTH * pixelRatio;
+    canvas.height = TRACK_HEIGHT * pixelRatio;
+    ctx.scale(pixelRatio, pixelRatio);
     const params = new URLSearchParams(location.search);
     const raceCharacter = new Image();
     let session = null;
@@ -132,6 +328,8 @@
     let lastPhase = null;
     let questionDrafts = [];
     let questionBaseline = null;
+    let picked = null;
+    let boardSnapshot = "";
 
     raceCharacter.onload = () => {
       if (state) renderTrack();
@@ -140,6 +338,7 @@
       console.error("Could not load the race character image.");
     };
     raceCharacter.src = "/assets/race-character.png";
+    document.fonts?.ready.then(() => { if (state) renderTrack(); });
 
     function showError(message) {
       document.getElementById("entry-error").textContent = message;
@@ -171,6 +370,19 @@
       if (button.dataset.idleText) button.textContent = button.dataset.idleText;
       button.disabled = false;
       button.removeAttribute("aria-busy");
+    }
+
+    function setConnection(status, text) {
+      const connection = document.getElementById("connection");
+      connection.classList.remove("hidden");
+      connection.dataset.state = status;
+      document.getElementById("connection-text").textContent = text;
+    }
+
+    function joinLink() {
+      const url = new URL(location.pathname, location.origin);
+      url.searchParams.set("pin", session.pin);
+      return url.toString();
     }
 
     async function post(path, payload) {
@@ -221,8 +433,9 @@
       if (pollTimer) clearInterval(pollTimer);
       entry.classList.add("hidden");
       gamePanel.classList.remove("hidden");
-      document.getElementById("pin-label").textContent = session.pin;
-      document.getElementById("connection").textContent = "Connecting…";
+      document.getElementById("pin-label").textContent = `${session.pin.slice(0, 3)} ${session.pin.slice(3)}`;
+      document.getElementById("share-link").textContent = joinLink();
+      setConnection("connecting", "Connecting…");
       document.getElementById("status-text").textContent = "Connecting to the game…";
       const refreshState = async () => {
         if (polling) return;
@@ -232,10 +445,10 @@
           const response = await fetch(`/api/state?${query}`, { cache: "no-store" });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || "Could not load game state.");
-          document.getElementById("connection").textContent = "Connected";
+          setConnection("connected", "Connected");
           update(result);
         } catch (error) {
-          document.getElementById("connection").textContent = "Reconnecting…";
+          setConnection("offline", "Reconnecting…");
           console.error("Could not refresh game state:", error);
         } finally {
           polling = false;
@@ -246,9 +459,9 @@
     }
 
     function renderTrack() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, TRACK_WIDTH, TRACK_HEIGHT);
       ctx.fillStyle = "#171717";
-      for (let y = 0; y < canvas.height; y += 20) {
+      for (let y = 0; y < TRACK_HEIGHT; y += 20) {
         ctx.fillRect(540, y, 10, 10);
         ctx.fillRect(550, y + 10, 10, 10);
       }
@@ -261,23 +474,33 @@
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, y + 20);
-        ctx.lineTo(canvas.width, y + 20);
+        ctx.lineTo(TRACK_WIDTH, y + 20);
         ctx.stroke();
         const speedFactor = lane === state.raceWinnerIndex
           ? 1
           : 0.62 + ((lane * 17) % 23) / 100;
         const laneProgress = Math.max(0, Math.min(1, progress * speedFactor));
-        let x = 20 + laneProgress * 500;
+        let x = 36 + laneProgress * 480;
         if ((state.phase === "reveal" || state.phase === "finished") && state.correctIndex !== null) {
-          x = lane === state.correctIndex ? 520 : 420 + lane * 8;
+          x = lane === state.correctIndex ? 516 : 420 + lane * 8;
         }
         const characterHeight = 50;
         const characterWidth = characterHeight * raceCharacter.width / raceCharacter.height;
         if (raceCharacter.complete && raceCharacter.naturalWidth > 0) {
           ctx.drawImage(raceCharacter, x, y + 5 - characterHeight / 2, characterWidth, characterHeight);
         }
+        ctx.beginPath();
+        ctx.arc(17, y + 5, 11, 0, Math.PI * 2);
         ctx.fillStyle = duckColors[lane];
-        ctx.fillRect(5, y - 15, 12, 12);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#fbf9f4";
+        ctx.stroke();
+        ctx.fillStyle = markerInk[lane];
+        ctx.font = "800 12px 'Bricolage Grotesque', system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(choiceLetters[lane], 17, y + 6);
       }
       if (isRacing && progress < 1) requestAnimationFrame(renderTrack);
     }
@@ -293,18 +516,21 @@
       } else {
         submitted = state.answered || submitted;
       }
+      const isHost = session.role === "host";
       document.getElementById("q-index").textContent = state.question
-        ? `${state.questionNumber} / ${state.questionTotal}` : "-";
+        ? `${state.questionNumber} / ${state.questionTotal}` : "–";
       document.getElementById("score").textContent = state.score ?? "0";
       document.getElementById("score-label").classList.toggle("hidden", session.role !== "player");
-      document.getElementById("timer-label").textContent = session.role === "host"
-        ? `Answers: ${state.answerCount} / ${state.playerCount}`
-        : `Players: ${state.playerCount}`;
+      document.getElementById("count-label").textContent = isHost && state.phase !== "lobby" ? "Answers" : "Players";
+      document.getElementById("count-value").textContent = isHost && state.phase !== "lobby"
+        ? `${state.answerCount} / ${state.playerCount}`
+        : state.playerCount;
       document.getElementById("host-controls").classList.toggle("hidden",
-        session.role !== "host" || (state.phase !== "lobby" && state.phase !== "finished"));
+        !isHost || (state.phase !== "lobby" && state.phase !== "finished"));
+      document.getElementById("lobby-host").classList.toggle("hidden", state.phase !== "lobby");
       document.getElementById("question-manager").classList.toggle("hidden",
-        session.role !== "host" || state.phase !== "lobby");
-      if (session.role === "host" && state.phase === "lobby" && Array.isArray(state.hostQuestions)) {
+        !isHost || state.phase !== "lobby");
+      if (isHost && state.phase === "lobby" && Array.isArray(state.hostQuestions)) {
         syncQuestionDrafts(state.hostQuestions);
       }
       document.getElementById("start-button").disabled = state.players.length === 0;
@@ -317,20 +543,47 @@
     }
 
     function renderLeaderboard() {
+      const isFinal = state.phase === "finished";
+      const snapshot = JSON.stringify([isFinal, state.players]);
+      if (snapshot === boardSnapshot) return;
+      boardSnapshot = snapshot;
+      const ownId = state.playerId || session.playerId;
       const list = document.getElementById("leaderboard-list");
+      document.getElementById("leaderboard-title").textContent = isFinal ? "Final standings" : "Leaderboard";
+      list.classList.toggle("is-final", isFinal);
       list.replaceChildren();
       for (const [index, player] of state.players.entries()) {
         const item = document.createElement("li");
-        item.textContent = `${index + 1}. ${player.name} — ${player.score}`;
+        item.className = `board-row${player.id === ownId ? " is-you" : ""}`;
+        item.style.setProperty("--i", Math.min(index, 10));
+        const rank = document.createElement("span");
+        rank.className = "board-rank";
+        rank.textContent = index + 1;
+        const name = document.createElement("span");
+        name.className = "board-name";
+        name.textContent = player.name;
+        if (player.id === ownId) {
+          const you = document.createElement("span");
+          you.className = "you-tag";
+          you.textContent = "You";
+          name.appendChild(you);
+        }
+        const score = document.createElement("span");
+        score.className = "board-score";
+        score.textContent = player.score;
+        item.append(rank, name, score);
         list.appendChild(item);
       }
       const playersList = document.getElementById("players-list");
       playersList.replaceChildren();
       for (const player of state.players) {
         const item = document.createElement("li");
+        item.className = "player-chip";
         item.textContent = player.name;
         playersList.appendChild(item);
       }
+      document.getElementById("players-empty").classList.toggle("hidden", state.players.length > 0);
+      document.getElementById("players-count").textContent = state.players.length ? `(${state.players.length})` : "";
     }
 
     function syncQuestionDrafts(serverQuestions) {
@@ -349,8 +602,10 @@
     }
 
     function updateQuestionSaveButton() {
-      document.getElementById("save-questions-button").disabled =
-        questionBaseline !== null && JSON.stringify(questionDrafts) === questionBaseline;
+      const unchanged = questionBaseline !== null && JSON.stringify(questionDrafts) === questionBaseline;
+      document.getElementById("save-questions-button").disabled = unchanged;
+      document.getElementById("unsaved-flag").classList.toggle("hidden", unchanged);
+      document.getElementById("question-count").textContent = `(${questionDrafts.length})`;
     }
 
     function renderQuestionEditor() {
@@ -358,17 +613,16 @@
       editor.replaceChildren();
       questionDrafts.forEach((question, questionIndex) => {
         const card = document.createElement("article");
-        card.className = "race-panel border rounded-lg p-3 space-y-2";
+        card.className = "rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--paper)] p-4 space-y-3";
 
         const promptLabel = document.createElement("label");
         promptLabel.className = "block text-sm font-bold";
         promptLabel.textContent = `Question ${questionIndex + 1}`;
         const prompt = document.createElement("textarea");
-        prompt.className = "w-full p-2 rounded-lg text-slate-900";
+        prompt.className = "field mt-1.5 font-normal";
         prompt.rows = 2;
         prompt.maxLength = 300;
         prompt.value = question.q;
-        prompt.setAttribute("aria-label", `Question ${questionIndex + 1}`);
         prompt.addEventListener("input", () => {
           question.q = prompt.value;
           updateQuestionSaveButton();
@@ -376,34 +630,39 @@
         promptLabel.appendChild(prompt);
         card.appendChild(promptLabel);
 
+        const choiceGrid = document.createElement("div");
+        choiceGrid.className = "grid sm:grid-cols-2 gap-3";
         question.choices.forEach((choice, choiceIndex) => {
           const choiceLabel = document.createElement("label");
-          choiceLabel.className = "block text-sm";
-          choiceLabel.textContent = `Choice ${choiceIndex + 1}`;
+          choiceLabel.className = "block text-sm font-semibold";
+          choiceLabel.textContent = `Choice ${choiceLetters[choiceIndex]}`;
           const choiceInput = document.createElement("input");
-          choiceInput.className = "w-full p-2 rounded-lg text-slate-900";
+          choiceInput.className = "field mt-1.5 font-normal";
           choiceInput.type = "text";
           choiceInput.maxLength = 120;
           choiceInput.value = choice;
-          choiceInput.setAttribute("aria-label", `Question ${questionIndex + 1}, choice ${choiceIndex + 1}`);
+          choiceInput.setAttribute("aria-label", `Question ${questionIndex + 1}, choice ${choiceLetters[choiceIndex]}`);
           choiceInput.addEventListener("input", () => {
             question.choices[choiceIndex] = choiceInput.value;
             updateQuestionSaveButton();
           });
           choiceLabel.appendChild(choiceInput);
-          card.appendChild(choiceLabel);
+          choiceGrid.appendChild(choiceLabel);
         });
+        card.appendChild(choiceGrid);
 
+        const footer = document.createElement("div");
+        footer.className = "flex flex-col sm:flex-row sm:items-end gap-3";
         const correctLabel = document.createElement("label");
-        correctLabel.className = "block text-sm font-bold";
+        correctLabel.className = "block text-sm font-bold flex-1";
         correctLabel.textContent = "Correct choice";
         const correctSelect = document.createElement("select");
-        correctSelect.className = "w-full p-2 rounded-lg text-slate-900";
+        correctSelect.className = "field mt-1.5 font-normal";
         correctSelect.setAttribute("aria-label", `Correct choice for question ${questionIndex + 1}`);
         question.choices.forEach((_, choiceIndex) => {
           const option = document.createElement("option");
           option.value = String(choiceIndex);
-          option.textContent = `Choice ${choiceIndex + 1}`;
+          option.textContent = `Choice ${choiceLetters[choiceIndex]}`;
           correctSelect.appendChild(option);
         });
         correctSelect.value = String(question.correct);
@@ -412,21 +671,63 @@
           updateQuestionSaveButton();
         });
         correctLabel.appendChild(correctSelect);
-        card.appendChild(correctLabel);
+        footer.appendChild(correctLabel);
 
         const removeButton = document.createElement("button");
         removeButton.type = "button";
-        removeButton.className = "race-choice p-2 rounded-lg border font-bold";
+        removeButton.className = "btn btn-quiet-danger";
         removeButton.textContent = "Remove question";
+        removeButton.setAttribute("aria-label", `Remove question ${questionIndex + 1}`);
         removeButton.addEventListener("click", () => {
           questionDrafts.splice(questionIndex, 1);
           renderQuestionEditor();
         });
-        card.appendChild(removeButton);
+        footer.appendChild(removeButton);
+        card.appendChild(footer);
         editor.appendChild(card);
       });
       document.getElementById("add-question-button").disabled = questionDrafts.length >= 50;
       updateQuestionSaveButton();
+    }
+
+    function myPick() {
+      return picked && picked.question === state.questionNumber ? picked.choice : null;
+    }
+
+    function buildChoice(element, index, text) {
+      const letter = document.createElement("span");
+      letter.className = "sr-only";
+      letter.textContent = `${choiceLetters[index]}: `;
+      const marker = document.createElement("span");
+      marker.className = "choice-marker";
+      marker.style.background = duckColors[index];
+      marker.style.color = markerInk[index];
+      marker.textContent = choiceLetters[index];
+      marker.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "choice-text";
+      label.textContent = text;
+      element.append(letter, marker, label);
+      return element;
+    }
+
+    function setChoiceTag(element, text) {
+      element.querySelector(".choice-tag")?.remove();
+      if (!text) return;
+      const tag = document.createElement("span");
+      tag.className = "choice-tag";
+      tag.textContent = text;
+      element.appendChild(tag);
+    }
+
+    function renderCountdown() {
+      const countdown = document.getElementById("countdown");
+      const timed = state && (state.phase === "question" || state.phase === "reveal") && state.deadline;
+      countdown.classList.toggle("hidden", !timed);
+      if (!timed) return;
+      const seconds = Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000));
+      countdown.textContent = state.phase === "reveal" ? `Next question in ${seconds}s` : `${seconds}s left`;
+      countdown.classList.toggle("urgent", state.phase === "question" && seconds <= 5);
     }
 
     function renderRound(roundChanged) {
@@ -437,7 +738,8 @@
       if (roundChanged) choices.replaceChildren();
       document.getElementById("start-button").textContent = "Start game";
       const hasQuestion = Boolean(state.question);
-      questionText.textContent = hasQuestion ? state.question.q : "";
+      questionText.textContent = hasQuestion && state.phase !== "finished" ? state.question.q : "";
+      renderCountdown();
 
       if (state.phase === "lobby") {
         phaseLabel.textContent = session.role === "host" ? "Waiting for players to join" : "Waiting for the host to start";
@@ -445,27 +747,27 @@
         return;
       }
       if (state.phase === "question") {
-        phaseLabel.textContent = `Choose your answer · ${Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000))}s`;
         if (session.role === "player") {
+          phaseLabel.textContent = "Choose your answer";
           if (roundChanged) {
             state.question.choices.forEach((choice, index) => {
-              const button = document.createElement("button");
-              button.className = "race-choice text-left p-3 rounded-lg flex items-center gap-2 border transition";
-              button.disabled = submitted;
-              const marker = document.createElement("span");
-              marker.className = "w-4 h-4 rounded-full inline-block shrink-0";
-              marker.style.background = duckColors[index];
-              const label = document.createElement("span");
-              label.textContent = choice;
-              button.append(marker, label);
+              const button = buildChoice(document.createElement("button"), index, choice);
+              button.type = "button";
+              button.className = "race-choice";
               button.addEventListener("click", () => sendAnswer(index));
               choices.appendChild(button);
             });
-          } else {
-            choices.querySelectorAll("button").forEach(button => { button.disabled = submitted; });
           }
+          const mine = myPick();
+          choices.querySelectorAll("button").forEach((button, index) => {
+            button.disabled = submitted;
+            button.classList.toggle("picked", index === mine);
+            button.setAttribute("aria-pressed", String(index === mine));
+            setChoiceTag(button, index === mine ? "Your pick" : "");
+          });
           status.textContent = submitted ? "Answer recorded. Good luck!" : "You can submit one answer before time runs out.";
         } else {
+          phaseLabel.textContent = "Players are answering";
           status.textContent = `${state.answerCount} of ${state.playerCount} players have answered.`;
         }
         return;
@@ -476,37 +778,46 @@
         return;
       }
       if (state.phase === "reveal") {
-        phaseLabel.textContent = `Correct answer · Next question in ${Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000))}s`;
+        phaseLabel.textContent = "Correct answer";
         const answer = state.question.choices[state.correctIndex];
-        status.textContent = `The answer is ${answer}.`;
+        const mine = myPick();
+        if (session.role !== "player") {
+          status.textContent = `The answer is ${answer}.`;
+        } else if (mine === null) {
+          status.textContent = `You didn’t answer this one. The answer is ${answer}.`;
+        } else if (mine === state.correctIndex) {
+          status.textContent = `You got it! The answer is ${answer}.`;
+        } else {
+          status.textContent = `Not this time. The answer is ${answer}.`;
+        }
         if (roundChanged) {
           state.question.choices.forEach((choice, index) => {
-            const button = document.createElement("div");
-            button.className = `race-choice text-left p-3 rounded-lg flex items-center gap-2 border ${index === state.correctIndex ? "correct" : ""}`;
-            const marker = document.createElement("span");
-            marker.className = "w-4 h-4 rounded-full inline-block shrink-0";
-            marker.style.background = duckColors[index];
-            const label = document.createElement("span");
-            label.textContent = choice;
-            button.append(marker, label);
-            choices.appendChild(button);
+            const tile = buildChoice(document.createElement("div"), index, choice);
+            const isCorrect = index === state.correctIndex;
+            tile.className = `race-choice${isCorrect ? " correct" : " dim"}${index === mine ? " picked" : ""}`;
+            setChoiceTag(tile, isCorrect ? "Correct" : index === mine ? "Your pick" : "");
+            choices.appendChild(tile);
           });
         }
         return;
       }
       phaseLabel.textContent = "Game over!";
-      status.textContent = `Final score: ${state.score ?? ""}`;
+      status.textContent = session.role === "player"
+        ? `Final score: ${state.score ?? 0}`
+        : "Here are the final standings.";
     }
 
     async function sendAnswer(choice) {
       try {
         submitted = true;
+        picked = { question: state.questionNumber, choice };
         renderRound(false);
         document.getElementById("status-text").textContent = "Submitting your answer…";
         await post(`/api/games/${session.pin}/answer`, { playerToken: session.token, choice });
         document.getElementById("status-text").textContent = "Answer submitted. Good luck!";
       } catch (error) {
         submitted = false;
+        picked = null;
         renderRound(false);
         document.getElementById("status-text").textContent = error.message;
       }
@@ -517,6 +828,11 @@
       const keyInput = document.getElementById("host-key-input");
       clearFieldError(keyInput);
       showError("");
+      if (!keyInput.value) {
+        setFieldError(keyInput, "Enter the host key.");
+        keyInput.focus();
+        return;
+      }
       const button = event.currentTarget.querySelector("button");
       setButtonLoading(button, "Opening host controls…");
       try {
@@ -527,8 +843,9 @@
       } catch (error) {
         if (error.status === 403) {
           setFieldError(keyInput, "That host key is incorrect. Check it and try again.");
+        } else {
+          document.getElementById("host-key-error").textContent = error.message;
         }
-        showError(error.message);
       } finally {
         clearButtonLoading(button);
         document.getElementById("host-key-input").value = "";
@@ -537,33 +854,40 @@
 
     document.getElementById("host-key-input").addEventListener("input", event => {
       clearFieldError(event.currentTarget);
-      showError("");
     });
 
     document.getElementById("join-form").addEventListener("submit", async event => {
       event.preventDefault();
       const pinInput = document.getElementById("pin-input");
+      const nameInput = document.getElementById("name-input");
       clearFieldError(pinInput);
+      clearFieldError(nameInput);
       showError("");
       const pin = pinInput.value.trim();
       if (!/^\d{6}$/.test(pin)) {
-        const message = "Enter a valid six-digit game PIN.";
-        setFieldError(pinInput, message);
-        showError(message);
+        setFieldError(pinInput, "Enter a valid six-digit game PIN.");
         pinInput.focus();
+        return;
+      }
+      const name = nameInput.value.trim();
+      if (!name) {
+        setFieldError(nameInput, "Enter a nickname so others can see you on the leaderboard.");
+        nameInput.focus();
         return;
       }
       const button = event.currentTarget.querySelector("button");
       setButtonLoading(button, "Joining game…");
       try {
-        const name = document.getElementById("name-input").value.trim();
         const result = await post(`/api/games/${pin}/join`, { name });
         saveSession({ pin, role: "player", token: result.playerToken, playerId: result.playerId });
       } catch (error) {
         if (error.status === 404) {
           setFieldError(pinInput, "No game was found with that PIN. Check the six digits and try again.");
+        } else if (/nickname/i.test(error.message)) {
+          setFieldError(nameInput, error.message);
+        } else {
+          showError(error.message);
         }
-        showError(error.message);
       } finally {
         clearButtonLoading(button);
       }
@@ -572,6 +896,21 @@
     document.getElementById("pin-input").addEventListener("input", event => {
       clearFieldError(event.currentTarget);
       showError("");
+    });
+
+    document.getElementById("name-input").addEventListener("input", event => {
+      clearFieldError(event.currentTarget);
+      showError("");
+    });
+
+    document.getElementById("copy-link-button").addEventListener("click", async () => {
+      const status = document.getElementById("copy-status");
+      try {
+        await navigator.clipboard.writeText(joinLink());
+        status.textContent = "Link copied.";
+      } catch {
+        status.textContent = "Couldn’t copy automatically. Select the link above and copy it.";
+      }
     });
 
     document.getElementById("start-button").addEventListener("click", async () => {
@@ -603,7 +942,9 @@
         correct: 0
       });
       renderQuestionEditor();
-      document.getElementById("question-editor").lastElementChild?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const added = document.getElementById("question-editor").lastElementChild;
+      added?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      added?.querySelector("textarea")?.focus({ preventScroll: true });
     });
 
     document.getElementById("save-questions-button").addEventListener("click", async event => {
@@ -648,13 +989,7 @@
     }
     if (savedPin) document.getElementById("pin-input").value = savedPin;
     setInterval(() => {
-      if (!state) return;
-      const phaseLabel = document.getElementById("phase-label");
-      if (state.phase === "question") {
-        phaseLabel.textContent = `Choose your answer · ${Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000))}s`;
-      } else if (state.phase === "reveal") {
-        phaseLabel.textContent = `Correct answer · Next question in ${Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000))}s`;
-      }
+      if (state) renderCountdown();
     }, 250);
   </script>
 </body>

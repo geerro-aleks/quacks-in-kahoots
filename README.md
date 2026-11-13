@@ -1,4 +1,4 @@
-# Duck Race Quiz
+# Quacks in Kahoots!
 
 The app starts with the questions in `quiz.mjs`, one shared quiz room, and a Neon Postgres database for the PIN, game phase, questions, players, answers, and scores. The host can add, edit, or remove questions in the lobby; saved questions are kept for future games. The host can reset the finished quiz for a new group. The race character artwork is served from `assets/race-character.png`.
 

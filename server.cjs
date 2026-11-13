@@ -30,13 +30,13 @@ async function start() {
       .flat()
       .filter(address => address && address.family === "IPv4" && !address.internal)
       .map(address => `http://${address.address}:${PORT}`);
-    console.log(`Duck Race Quiz: http://localhost:${PORT}`);
+    console.log(`Quacks in Kahoots!: http://localhost:${PORT}`);
     for (const address of addresses) console.log(`Local network: ${address}`);
     console.log("Set DATABASE_URL and HOST_KEY before using host controls.");
   });
 }
 
 start().catch(error => {
-  console.error("Could not start Duck Race Quiz:", error);
+  console.error("Could not start Quacks in Kahoots!:", error);
   process.exitCode = 1;
 });

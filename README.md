@@ -2,6 +2,14 @@
 
 The app starts with the questions in `quiz.mjs`, one shared quiz room, and a Neon Postgres database for the PIN, game phase, questions, players, answers, and scores. The host can add, edit, or remove questions in the lobby; saved questions are kept for future games. The host can reset the finished quiz for a new group. The race character artwork is served from `assets/race-character.png`.
 
+## Technology stack
+
+- **Frontend:** a single static page, [index.html](index.html), in plain HTML, CSS, and vanilla JavaScript with no framework or build step. Styling uses Tailwind CSS (loaded from its CDN) plus custom CSS; fonts are Bricolage Grotesque and Figtree from Google Fonts. The race track is drawn on an HTML Canvas 2D element.
+- **Backend:** Node.js 20+ with one request handler, [app.mjs](app.mjs), built on the standard Fetch API (`Request`/`Response`). On Vercel it runs as serverless functions (`api/`); locally, [server.cjs](server.cjs) wraps it in a plain `node:http` server.
+- **Database:** Neon serverless Postgres, accessed through the `@neondatabase/serverless` driver (the only npm dependency). The schema is in [schema.sql](schema.sql).
+- **Live updates:** clients poll `/api/state` every three seconds; there are no WebSockets.
+- **Hosting:** Vercel (static page and API functions, configured in [vercel.json](vercel.json)).
+
 ## Create the Neon database
 
 1. Create a Neon account and a free Postgres project.
@@ -19,7 +27,7 @@ Neon currently lists a $0 Free plan with usage/storage limits and says no credit
    - `HOST_KEY`: a long, random private secret. Generate one with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
    - `GAME_PIN` (optional): a chosen six-digit PIN. If omitted, the first host session creates a random persistent PIN in the database.
 4. Deploy. Vercel serves the static page and the API functions under `api/` (`host/session.js`, `state.js`, and `game.js`).
-5. Open the Vercel URL, enter `HOST_KEY` under **Host the preset quiz**, and share the displayed PIN and URL with players. Players can join from Wi-Fi or mobile data.
+5. Open the Vercel URL, open **Hosting this quiz?**, enter `HOST_KEY`, and share the displayed PIN and URL with players. Players can join from Wi-Fi or mobile data.
 
 Do not put `HOST_KEY` or `DATABASE_URL` in source code or in browser JavaScript. They are read only by the server. The host key is intentionally an environment secret rather than a hardcoded value: hardcoding it would expose host controls to anyone who can read the repository.
 

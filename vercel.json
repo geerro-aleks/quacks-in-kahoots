@@ -3,6 +3,9 @@
     "api/host/session.js": {
       "maxDuration": 10
     },
+    "api/host/key.js": {
+      "maxDuration": 10
+    },
     "api/state.js": {
       "maxDuration": 10
     },

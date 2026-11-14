@@ -46,14 +46,52 @@ function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function createHostToken(hostKey, pin) {
-  return crypto.createHmac("sha256", hostKey).update(`duck-race-host:${pin}`).digest("hex");
+// Host tokens are signed with the HOST_KEY environment secret and bound to the current in-app
+// host key, so changing the key signs out other host sessions. With no in-app key set, the
+// token format is unchanged from before in-app keys existed.
+function createHostToken(pin, storedKeyHash) {
+  const scope = storedKeyHash ? `duck-race-host:${pin}:${storedKeyHash}` : `duck-race-host:${pin}`;
+  return crypto.createHmac("sha256", process.env.HOST_KEY).update(scope).digest("hex");
 }
 
 function safeEqual(left, right) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function hashHostKey(key) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  return `scrypt$${salt}$${crypto.scryptSync(key, salt, 32).toString("hex")}`;
+}
+
+function verifyHostKeyHash(key, stored) {
+  const [scheme, salt, hash] = stored.split("$");
+  if (scheme !== "scrypt" || !salt || !hash) return false;
+  return safeEqual(crypto.scryptSync(key, salt, 32).toString("hex"), hash);
+}
+
+// The host key set from the app, or null if none is set (or schema.sql hasn't been rerun yet).
+async function getStoredHostKey(sql) {
+  try {
+    const [row] = await sql`SELECT host_key_hash FROM quiz_settings WHERE id = 'main'`;
+    return row?.host_key_hash || null;
+  } catch (error) {
+    if (error.code === "42P01") return null;
+    throw error;
+  }
+}
+
+// The in-app key and the HOST_KEY environment value (kept as a recovery key) both unlock host controls.
+function hostKeyMatches(key, storedKeyHash) {
+  if (typeof key !== "string" || !key) return false;
+  if (storedKeyHash && verifyHostKeyHash(key, storedKeyHash)) return true;
+  return safeEqual(key, process.env.HOST_KEY);
+}
+
+async function isHostToken(sql, token, pin) {
+  if (!process.env.HOST_KEY || typeof token !== "string") return false;
+  return safeEqual(token, createHostToken(pin, await getStoredHostKey(sql)));
 }
 
 async function ensureGame(sql) {
@@ -248,14 +286,44 @@ async function route(request) {
   }
 
   if (request.method === "POST" && url.pathname === "/api/host/session") {
-    const hostKey = process.env.HOST_KEY;
-    if (!hostKey) return fail("HOST_KEY is not configured on the server.", 503);
+    if (!process.env.HOST_KEY) return fail("HOST_KEY is not configured on the server.", 503);
     const hostBody = await readJson(request);
-    if (typeof hostBody.hostKey !== "string" || !safeEqual(hostBody.hostKey, hostKey)) {
+    const storedKeyHash = await getStoredHostKey(sql);
+    if (!hostKeyMatches(hostBody.hostKey, storedKeyHash)) {
       return fail("The host key is incorrect.", 403);
     }
     const game = await ensureGame(sql);
-    return json({ pin: game.pin, hostToken: createHostToken(hostKey, game.pin) });
+    return json({ pin: game.pin, hostToken: createHostToken(game.pin, storedKeyHash) });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/host/key") {
+    if (!process.env.HOST_KEY) return fail("HOST_KEY is not configured on the server.", 503);
+    const keyBody = await readJson(request);
+    const storedKeyHash = await getStoredHostKey(sql);
+    if (!hostKeyMatches(keyBody.currentKey, storedKeyHash)) {
+      return fail("The current host key is incorrect.", 403);
+    }
+    const newKey = typeof keyBody.newKey === "string" ? keyBody.newKey : "";
+    if (newKey.length < 8 || newKey.length > 200) {
+      return fail("The new host key must be 8 to 200 characters.", 400);
+    }
+    if (newKey === keyBody.currentKey) {
+      return fail("Choose a new host key that is different from the current one.", 400);
+    }
+    try {
+      await sql`
+        INSERT INTO quiz_settings (id, host_key_hash, updated_at)
+        VALUES ('main', ${hashHostKey(newKey)}, now())
+        ON CONFLICT (id) DO UPDATE
+          SET host_key_hash = EXCLUDED.host_key_hash, updated_at = EXCLUDED.updated_at
+      `;
+    } catch (error) {
+      if (error.code === "42P01") {
+        return fail("Changing the host key needs the updated database schema. Run schema.sql in the Neon SQL Editor, then try again.", 503);
+      }
+      throw error;
+    }
+    return json({ ok: true });
   }
 
   if (request.method === "GET" && url.pathname === "/api/state") {
@@ -265,7 +333,7 @@ async function route(request) {
     const game = await getGame(sql, pin);
     if (!game) return fail("Game not found. Check the PIN and make sure the quiz is hosted.", 404);
     if (role === "host") {
-      if (!process.env.HOST_KEY || !safeEqual(token, createHostToken(process.env.HOST_KEY, pin))) {
+      if (!(await isHostToken(sql, token, pin))) {
         return fail("Invalid host session.", 403);
       }
     } else if (role === "player") {
@@ -304,7 +372,7 @@ async function route(request) {
   const [currentGame] = await sql`SELECT * FROM quiz_games WHERE id = 'main' AND pin = ${pin}`;
 
   if (request.method === "POST" && parts[3] === "questions") {
-    if (!process.env.HOST_KEY || !safeEqual(body.hostToken || "", createHostToken(process.env.HOST_KEY, pin))) {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
       return fail("Only the host can edit quiz questions.", 403);
     }
     if (currentGame.phase !== "lobby") {
@@ -361,7 +429,7 @@ async function route(request) {
   }
 
   if (request.method === "POST" && parts[3] === "start") {
-    if (!process.env.HOST_KEY || !safeEqual(body.hostToken || "", createHostToken(process.env.HOST_KEY, pin))) {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
       return fail("Only the host can start the quiz.", 403);
     }
     const now = Date.now();
@@ -380,7 +448,7 @@ async function route(request) {
   }
 
   if (request.method === "POST" && parts[3] === "reset") {
-    if (!process.env.HOST_KEY || !safeEqual(body.hostToken || "", createHostToken(process.env.HOST_KEY, pin))) {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
       return fail("Only the host can reset the quiz.", 403);
     }
     const [reset] = await sql`

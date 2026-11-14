@@ -26,3 +26,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS quiz_players_unique_name
 
 CREATE INDEX IF NOT EXISTS quiz_players_game_score
   ON quiz_players (game_pin, score DESC, name);
+
+CREATE TABLE IF NOT EXISTS quiz_settings (
+  id TEXT PRIMARY KEY CHECK (id = 'main'),
+  host_key_hash TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

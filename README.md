@@ -19,3 +19,9 @@ Players can join while the quiz is in progress. A latecomer can answer the curre
 Clients request updates every three seconds because Vercel Functions do not provide this app with a shared always-on process for pushing live state to all players. This produces many requests in a large room: 500 players for a full quiz could make roughly 130,000 state requests, in addition to answer and join requests. Free Vercel/Neon usage is limited, so this is **not yet load-tested or guaranteed for hundreds of simultaneous players**. Test with a small group first and check both providers' current limits. If usage requires a paid plan, stop before upgrading if you do not want charges.
 
 The room state and scores persist in Neon across function restarts. The project is a prototype, not hardened against abuse or large public events.
+
+## Changing the host key
+
+On the join page, open **Hosting this quiz?** → **Change the host key**, enter the current key, and choose a new one (8–200 characters). The new key is stored as a salted scrypt hash in the `quiz_settings` table, never as plain text, and changing it signs out any other open host sessions. This needs the `quiz_settings` table: rerun [schema.sql](schema.sql) in the Neon SQL Editor once (its statements are safe to rerun).
+
+The `HOST_KEY` environment variable keeps working as a recovery key, so you can still get in and set a new key if you forget the one you chose. To go back to using only `HOST_KEY`, run `DELETE FROM quiz_settings;` in the Neon SQL Editor.

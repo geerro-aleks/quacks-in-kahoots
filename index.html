@@ -349,7 +349,7 @@
       <details class="disclosure panel px-5 sm:px-7 py-4">
         <summary class="font-semibold min-h-[32px]">Hosting this quiz?</summary>
         <form id="host-form" class="pt-4 space-y-3" novalidate>
-          <p class="muted text-sm">Enter the host key configured by the server to open the fixed quiz room.</p>
+          <p class="muted text-sm">Enter the host key to open the fixed quiz room.</p>
           <div>
             <label class="label" for="host-key-input">Host key</label>
             <input id="host-key-input" class="field" type="password" autocomplete="current-password" aria-describedby="host-key-error" required>
@@ -357,6 +357,31 @@
           </div>
           <button class="btn btn-secondary w-full">Open host controls</button>
         </form>
+        <details class="disclosure mt-4 pt-4 border-t border-[color:var(--panel-border)]">
+          <summary class="text-sm font-semibold min-h-[32px]">Change the host key</summary>
+          <form id="change-key-form" class="pt-3 space-y-3" novalidate>
+            <p class="muted text-sm">Enter the current key and choose a new one. Anyone else with host controls open will need the new key. The HOST_KEY in your server settings keeps working as a recovery key.</p>
+            <div>
+              <label class="label" for="change-current-input">Current host key</label>
+              <input id="change-current-input" class="field" type="password" autocomplete="current-password" maxlength="200" aria-describedby="change-current-error" required>
+              <p id="change-current-error" class="field-error" role="alert"></p>
+            </div>
+            <div>
+              <label class="label" for="change-new-input">New host key</label>
+              <input id="change-new-input" class="field" type="password" autocomplete="new-password" minlength="8" maxlength="200" aria-describedby="change-new-hint change-new-error" required>
+              <p id="change-new-hint" class="muted text-xs mt-1.5">At least 8 characters.</p>
+              <p id="change-new-error" class="field-error" role="alert"></p>
+            </div>
+            <div>
+              <label class="label" for="change-confirm-input">Confirm new host key</label>
+              <input id="change-confirm-input" class="field" type="password" autocomplete="new-password" maxlength="200" aria-describedby="change-confirm-error" required>
+              <p id="change-confirm-error" class="field-error" role="alert"></p>
+            </div>
+            <button class="btn btn-secondary w-full">Change host key</button>
+            <p id="change-key-status" class="text-sm font-semibold text-[color:var(--online)]" role="status"></p>
+            <p id="change-key-error" class="field-error" role="alert"></p>
+          </form>
+        </details>
       </details>
     </section>
 
@@ -987,6 +1012,40 @@
     document.getElementById("host-key-input").addEventListener("input", event => {
       clearFieldError(event.currentTarget);
     });
+
+    document.getElementById("change-key-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const current = document.getElementById("change-current-input");
+      const next = document.getElementById("change-new-input");
+      const confirm = document.getElementById("change-confirm-input");
+      const status = document.getElementById("change-key-status");
+      const formError = document.getElementById("change-key-error");
+      [current, next, confirm].forEach(clearFieldError);
+      status.textContent = "";
+      formError.textContent = "";
+      const fail = (input, message) => { setFieldError(input, message); input.focus(); };
+      if (!current.value) return fail(current, "Enter the current host key.");
+      if (next.value.length < 8) return fail(next, "Use at least 8 characters for the new key.");
+      if (next.value === current.value) return fail(next, "Choose a key that’s different from the current one.");
+      if (confirm.value !== next.value) return fail(confirm, "The new keys don’t match. Type the new key again.");
+      const button = event.currentTarget.querySelector("button");
+      setButtonLoading(button, "Changing host key…");
+      try {
+        await post("/api/host/key", { currentKey: current.value, newKey: next.value });
+        [current, next, confirm].forEach(input => { input.value = ""; });
+        status.textContent = "Host key changed. Use the new key next time you open host controls.";
+      } catch (error) {
+        if (error.status === 403) fail(current, "That host key is incorrect. Check it and try again.");
+        else if (error.status === 400) fail(next, error.message);
+        else formError.textContent = error.message;
+      } finally {
+        clearButtonLoading(button);
+      }
+    });
+
+    for (const id of ["change-current-input", "change-new-input", "change-confirm-input"]) {
+      document.getElementById(id).addEventListener("input", event => clearFieldError(event.currentTarget));
+    }
 
     document.getElementById("join-form").addEventListener("submit", async event => {
       event.preventDefault();

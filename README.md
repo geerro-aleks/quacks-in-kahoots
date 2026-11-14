@@ -22,6 +22,6 @@ The room state and scores persist in Neon across function restarts. The project 
 
 ## Changing the host key
 
-On the join page, open **Hosting this quiz?** → **Change the host key**, enter the current key, and choose a new one (8–200 characters). The new key is stored as a salted scrypt hash in the `quiz_settings` table, never as plain text, and changing it signs out any other open host sessions. This needs the `quiz_settings` table: rerun [schema.sql](schema.sql) in the Neon SQL Editor once (its statements are safe to rerun).
+Open host controls with your current key, then open **Change host key** (in the lobby or after a game finishes). Enter the current key again and choose a new one (8–200 characters). The new key is stored as a salted scrypt hash in the `quiz_settings` table, never as plain text. You stay signed in; any other open host sessions are signed out. This needs the `quiz_settings` table: rerun [schema.sql](schema.sql) in the Neon SQL Editor once (its statements are safe to rerun).
 
 The `HOST_KEY` environment variable keeps working as a recovery key, so you can still get in and set a new key if you forget the one you chose. To go back to using only `HOST_KEY`, run `DELETE FROM quiz_settings;` in the Neon SQL Editor.

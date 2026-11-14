@@ -299,6 +299,10 @@ async function route(request) {
   if (request.method === "POST" && url.pathname === "/api/host/key") {
     if (!process.env.HOST_KEY) return fail("HOST_KEY is not configured on the server.", 503);
     const keyBody = await readJson(request);
+    const keyPin = typeof keyBody.pin === "string" ? keyBody.pin : "";
+    if (!(await getGame(sql, keyPin)) || !(await isHostToken(sql, keyBody.hostToken, keyPin))) {
+      return fail("Your host session has expired. Open host controls again, then change the key.", 401);
+    }
     const storedKeyHash = await getStoredHostKey(sql);
     if (!hostKeyMatches(keyBody.currentKey, storedKeyHash)) {
       return fail("The current host key is incorrect.", 403);
@@ -310,10 +314,11 @@ async function route(request) {
     if (newKey === keyBody.currentKey) {
       return fail("Choose a new host key that is different from the current one.", 400);
     }
+    const newKeyHash = hashHostKey(newKey);
     try {
       await sql`
         INSERT INTO quiz_settings (id, host_key_hash, updated_at)
-        VALUES ('main', ${hashHostKey(newKey)}, now())
+        VALUES ('main', ${newKeyHash}, now())
         ON CONFLICT (id) DO UPDATE
           SET host_key_hash = EXCLUDED.host_key_hash, updated_at = EXCLUDED.updated_at
       `;
@@ -323,7 +328,8 @@ async function route(request) {
       }
       throw error;
     }
-    return json({ ok: true });
+    // Other host sessions are signed out; the host who changed the key gets a fresh session.
+    return json({ ok: true, hostToken: createHostToken(keyPin, newKeyHash) });
   }
 
   if (request.method === "GET" && url.pathname === "/api/state") {

@@ -20,6 +20,31 @@ function getDatabase() {
   return database;
 }
 
+// Adds columns and tables introduced after the first schema.sql, once per server start, so
+// existing databases keep working without a manual migration. Safe to run repeatedly.
+let schemaReady = null;
+function ensureSchema(sql) {
+  schemaReady ||= (async () => {
+    await sql`ALTER TABLE quiz_games ADD COLUMN IF NOT EXISTS answer_seconds INTEGER`;
+    await sql`ALTER TABLE quiz_games ADD COLUMN IF NOT EXISTS reveal_seconds INTEGER`;
+    await sql`ALTER TABLE quiz_games ADD COLUMN IF NOT EXISTS paused_at BIGINT`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS quiz_settings (
+        id TEXT PRIMARY KEY CHECK (id = 'main'),
+        host_key_hash TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `;
+  })().catch(error => {
+    schemaReady = null;
+    console.error("Automatic schema update failed; run schema.sql in the Neon SQL Editor:", error);
+  });
+  return schemaReady;
+}
+
+const MIN_SECONDS = 5;
+const MAX_SECONDS = 120;
+
 function json(value, status = 200) {
   return new Response(JSON.stringify(value), {
     status,
@@ -157,14 +182,14 @@ async function advanceGame(sql, pin, questions) {
     SET phase = 'race',
         race_started_at = ${now}::bigint,
         race_ends_at = ${now + RACE_SECONDS * 1000}::bigint
-    WHERE id = 'main' AND pin = ${pin}
+    WHERE id = 'main' AND pin = ${pin} AND paused_at IS NULL
       AND phase = 'question' AND deadline <= ${now}::bigint
   `;
 
   const [expiredRace] = await sql`
     SELECT question_index
     FROM quiz_games
-    WHERE id = 'main' AND pin = ${pin}
+    WHERE id = 'main' AND pin = ${pin} AND paused_at IS NULL
       AND phase = 'race' AND race_ends_at <= ${now}::bigint
   `;
   const correctIndex = expiredRace ? questions[Number(expiredRace.question_index)].correct : null;
@@ -173,8 +198,8 @@ async function advanceGame(sql, pin, questions) {
       UPDATE quiz_games
       SET phase = 'reveal',
           correct_index = ${correctIndex}::integer,
-          deadline = ${now + REVEAL_SECONDS * 1000}::bigint
-      WHERE id = 'main' AND pin = ${pin}
+          deadline = ${now}::bigint + COALESCE(reveal_seconds, ${REVEAL_SECONDS}::integer)::bigint * 1000
+      WHERE id = 'main' AND pin = ${pin} AND paused_at IS NULL
         AND phase = 'race' AND race_ends_at <= ${now}::bigint
         AND ${correctIndex}::integer IS NOT NULL
       RETURNING pin, correct_index
@@ -186,7 +211,6 @@ async function advanceGame(sql, pin, questions) {
       AND players.answer_index = transitioned.correct_index
   `;
 
-  const nextQuestionDeadline = now + ANSWER_SECONDS * 1000;
   await sql`
     WITH transitioned AS (
       UPDATE quiz_games
@@ -201,11 +225,11 @@ async function advanceGame(sql, pin, questions) {
           correct_index = NULL,
           deadline = CASE
             WHEN question_index + 1 >= ${questions.length} THEN NULL
-            ELSE ${nextQuestionDeadline}::bigint
+            ELSE ${now}::bigint + COALESCE(answer_seconds, ${ANSWER_SECONDS}::integer)::bigint * 1000
           END,
           race_started_at = NULL,
           race_ends_at = NULL
-      WHERE id = 'main' AND pin = ${pin}
+      WHERE id = 'main' AND pin = ${pin} AND paused_at IS NULL
         AND phase = 'reveal' AND deadline <= ${now}::bigint
       RETURNING pin, phase
     )
@@ -269,6 +293,14 @@ async function publicState(sql, game, role, token, questions) {
     correctIndex: game.phase === "reveal" || game.phase === "finished" ? game.correct_index : null,
     answered: Boolean(ownPlayer?.answer_index !== null && ownPlayer?.answer_index !== undefined),
     answerCount,
+    paused: game.paused_at !== null && game.paused_at !== undefined,
+    pausedAt: game.paused_at === null || game.paused_at === undefined ? null : Number(game.paused_at),
+    ...(role === "host" ? {
+      timing: {
+        answerSeconds: Number(game.answer_seconds ?? ANSWER_SECONDS),
+        revealSeconds: Number(game.reveal_seconds ?? REVEAL_SECONDS)
+      }
+    } : {}),
     ...(role === "host" && game.phase === "lobby" ? { hostQuestions: questions } : {}),
     ...(role === "host" ? { role: "host" } : ownPlayer ? { role: "player", playerId: ownPlayer.id } : {})
   };
@@ -279,6 +311,7 @@ async function route(request) {
   let parts = url.pathname.split("/").filter(Boolean);
   let body = null;
   const sql = getDatabase();
+  await ensureSchema(sql);
 
   if (request.method === "GET" && url.pathname === "/health") {
     await sql`SELECT 1`;
@@ -441,7 +474,8 @@ async function route(request) {
     const now = Date.now();
     const [started] = await sql`
       UPDATE quiz_games
-      SET phase = 'question', question_index = 0, deadline = ${now + ANSWER_SECONDS * 1000}
+      SET phase = 'question', question_index = 0, paused_at = NULL,
+          deadline = ${now}::bigint + COALESCE(answer_seconds, ${ANSWER_SECONDS}::integer)::bigint * 1000
       WHERE id = 'main' AND pin = ${pin} AND phase = 'lobby'
         AND EXISTS (SELECT 1 FROM quiz_players WHERE game_pin = ${pin})
       RETURNING pin
@@ -460,7 +494,7 @@ async function route(request) {
     const [reset] = await sql`
       WITH reset_game AS (
         UPDATE quiz_games
-        SET phase = 'lobby', question_index = -1, deadline = NULL,
+        SET phase = 'lobby', question_index = -1, deadline = NULL, paused_at = NULL,
             race_started_at = NULL, race_ends_at = NULL, correct_index = NULL
         WHERE id = 'main' AND pin = ${pin} AND phase = 'finished'
         RETURNING pin
@@ -482,6 +516,9 @@ async function route(request) {
     if (!Number.isInteger(body.choice) || body.choice < 0 || body.choice > 3) {
       return fail("Select one of the four answer choices.", 400);
     }
+    if (currentGame.paused_at != null) {
+      return fail("The quiz is paused. You can answer when the host resumes it.", 409);
+    }
     const now = Date.now();
     const [answer] = await sql`
       UPDATE quiz_players AS players
@@ -490,12 +527,67 @@ async function route(request) {
       WHERE players.game_pin = ${pin}
         AND players.token_hash = ${hashToken(body.playerToken)}
         AND players.answer_index IS NULL
-        AND games.id = 'main' AND games.pin = ${pin}
+        AND games.id = 'main' AND games.pin = ${pin} AND games.paused_at IS NULL
         AND games.phase = 'question' AND games.deadline > ${now}
       RETURNING players.id
     `;
     if (answer) return json({ ok: true });
     return fail("Your answer could not be recorded. Time may be up, or you may have already answered.", 409);
+  }
+
+  if (request.method === "POST" && parts[3] === "pause") {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
+      return fail("Only the host can pause the quiz.", 403);
+    }
+    const [paused] = await sql`
+      UPDATE quiz_games SET paused_at = ${Date.now()}::bigint
+      WHERE id = 'main' AND pin = ${pin} AND paused_at IS NULL
+        AND phase IN ('question', 'race', 'reveal')
+      RETURNING pin
+    `;
+    if (!paused) {
+      if (currentGame.paused_at != null) return fail("The quiz is already paused.", 409);
+      return fail("The quiz can only be paused while a game is running.", 409);
+    }
+    return json({ ok: true });
+  }
+
+  if (request.method === "POST" && parts[3] === "resume") {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
+      return fail("Only the host can resume the quiz.", 403);
+    }
+    // Shift every running timer forward by the time spent paused, so play continues where it stopped.
+    const now = Date.now();
+    const [resumed] = await sql`
+      UPDATE quiz_games
+      SET deadline = deadline + (${now}::bigint - paused_at),
+          race_started_at = race_started_at + (${now}::bigint - paused_at),
+          race_ends_at = race_ends_at + (${now}::bigint - paused_at),
+          paused_at = NULL
+      WHERE id = 'main' AND pin = ${pin} AND paused_at IS NOT NULL
+      RETURNING pin
+    `;
+    if (!resumed) return fail("The quiz isn't paused.", 409);
+    return json({ ok: true });
+  }
+
+  if (request.method === "POST" && parts[3] === "timing") {
+    if (!(await isHostToken(sql, body.hostToken, pin))) {
+      return fail("Only the host can change the game timing.", 403);
+    }
+    const valid = value => Number.isInteger(value) && value >= MIN_SECONDS && value <= MAX_SECONDS;
+    if (!valid(body.answerSeconds)) {
+      return fail(`Answer time must be a whole number from ${MIN_SECONDS} to ${MAX_SECONDS} seconds.`, 400);
+    }
+    if (!valid(body.revealSeconds)) {
+      return fail(`The break must be a whole number from ${MIN_SECONDS} to ${MAX_SECONDS} seconds.`, 400);
+    }
+    await sql`
+      UPDATE quiz_games
+      SET answer_seconds = ${body.answerSeconds}::integer, reveal_seconds = ${body.revealSeconds}::integer
+      WHERE id = 'main' AND pin = ${pin}
+    `;
+    return json({ ok: true, answerSeconds: body.answerSeconds, revealSeconds: body.revealSeconds });
   }
 
   return fail("API endpoint not found.", 404);

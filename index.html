@@ -118,6 +118,7 @@
       transition: background-color 200ms ease, color 200ms ease;
     }
     .countdown.urgent { background: var(--danger-tint); color: var(--danger); }
+    .countdown.paused { background: var(--sun-yellow); color: var(--ink); }
 
     /* Answer tiles */
     .race-choice {
@@ -385,6 +386,10 @@
         </div>
         <div id="choices-grid" class="grid sm:grid-cols-2 gap-3"></div>
         <p id="status-text" class="muted" aria-live="polite"></p>
+        <div id="live-controls" class="hidden">
+          <button id="pause-button" type="button" class="btn btn-secondary w-full sm:w-auto sm:min-w-[14rem]">Pause quiz</button>
+          <p id="pause-error" class="field-error text-center" role="alert"></p>
+        </div>
 
         <div id="host-controls" class="hidden space-y-5 text-left">
           <div id="lobby-host" class="space-y-5">
@@ -417,6 +422,31 @@
               </div>
               <p id="question-save-status" class="text-sm" role="status" aria-live="polite"></p>
             </div>
+          </details>
+
+          <details id="timing-manager" class="disclosure border-t border-[color:var(--panel-border)] pt-4">
+            <summary class="font-bold min-h-[32px]">
+              <span>Game timing <span id="timing-summary" class="muted font-semibold"></span></span>
+            </summary>
+            <form id="timing-form" class="pt-3 space-y-3" novalidate>
+              <p class="muted text-sm">Choose how long players get to answer, and how long the answer and leaderboard stay up before the next question loads. The race in between always takes 6 seconds.</p>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="label" for="answer-seconds-input">Answer time (seconds)</label>
+                  <input id="answer-seconds-input" class="field" type="number" inputmode="numeric" min="5" max="120" step="1" aria-describedby="timing-hint answer-seconds-error" required>
+                  <p id="answer-seconds-error" class="field-error" role="alert"></p>
+                </div>
+                <div>
+                  <label class="label" for="reveal-seconds-input">Break before next question (seconds)</label>
+                  <input id="reveal-seconds-input" class="field" type="number" inputmode="numeric" min="5" max="120" step="1" aria-describedby="timing-hint reveal-seconds-error" required>
+                  <p id="reveal-seconds-error" class="field-error" role="alert"></p>
+                </div>
+              </div>
+              <p id="timing-hint" class="muted text-xs">Each can be 5 to 120 seconds. Changes apply from the next question.</p>
+              <button class="btn btn-secondary w-full">Save timing</button>
+              <p id="timing-status" class="text-sm font-semibold text-[color:var(--online)]" role="status"></p>
+              <p id="timing-error" class="field-error" role="alert"></p>
+            </form>
           </details>
 
           <button id="reset-button" class="hidden btn btn-primary w-full">Reset quiz for a new group</button>
@@ -479,6 +509,8 @@
     let lastPhase = null;
     let questionDrafts = [];
     let questionBaseline = null;
+    let refreshNow = null;
+    let timingDirty = false;
     let picked = null;
     let boardSnapshot = "";
 
@@ -539,7 +571,7 @@
     async function post(path, payload) {
       let requestPath = path;
       let requestPayload = payload;
-      const gameAction = path.match(/^\/api\/games\/(\d{6})\/(join|start|reset|answer|questions)$/);
+      const gameAction = path.match(/^\/api\/games\/(\d{6})\/(join|start|reset|answer|questions|pause|resume|timing)$/);
       if (gameAction) {
         requestPath = "/api/game";
         requestPayload = { ...payload, pin: gameAction[1], action: gameAction[2] };
@@ -605,16 +637,26 @@
           polling = false;
         }
       };
+      refreshNow = refreshState;
       refreshState();
       pollTimer = setInterval(refreshState, 3000);
+    }
+
+    // While the host has paused the quiz, every timer is frozen at the moment of the pause.
+    function gameNow() {
+      return state?.paused && state.pausedAt ? state.pausedAt : Date.now();
+    }
+
+    function isLivePhase() {
+      return Boolean(state) && (state.phase === "question" || state.phase === "race" || state.phase === "reveal");
     }
 
     function renderTrack() {
       const isRacing = state && state.phase === "race";
       const duration = Math.max(1, state?.raceEndsAt - state?.raceStartedAt);
-      const progress = isRacing ? Math.min(1, Math.max(0, (Date.now() - state.raceStartedAt) / duration)) : 0;
+      const progress = isRacing ? Math.min(1, Math.max(0, (gameNow() - state.raceStartedAt) / duration)) : 0;
       paintTrack(ctx, { phase: state.phase, progress, raceWinnerIndex: state.raceWinnerIndex, correctIndex: state.correctIndex });
-      if (isRacing && progress < 1) requestAnimationFrame(renderTrack);
+      if (isRacing && progress < 1 && !state.paused) requestAnimationFrame(renderTrack);
     }
 
     // Draws the race track; shared by the live game and the practice demo.
@@ -687,6 +729,17 @@
       document.getElementById("lobby-host").classList.toggle("hidden", state.phase !== "lobby");
       document.getElementById("question-manager").classList.toggle("hidden",
         !isHost || state.phase !== "lobby");
+      document.getElementById("timing-manager").classList.toggle("hidden",
+        !isHost || state.phase !== "lobby");
+      if (isHost) syncTiming(state.timing);
+      document.getElementById("live-controls").classList.toggle("hidden", !isHost || !isLivePhase());
+      const pauseButton = document.getElementById("pause-button");
+      if (pauseButton.getAttribute("aria-busy") !== "true") {
+        delete pauseButton.dataset.idleText;
+        pauseButton.textContent = state.paused ? "Resume quiz" : "Pause quiz";
+        pauseButton.classList.toggle("btn-primary", Boolean(state.paused));
+        pauseButton.classList.toggle("btn-secondary", !state.paused);
+      }
       if (isHost && state.phase === "lobby" && Array.isArray(state.hostQuestions)) {
         syncQuestionDrafts(state.hostQuestions);
       }
@@ -880,14 +933,38 @@
     function renderCountdown() {
       const countdown = document.getElementById("countdown");
       const timed = state && (state.phase === "question" || state.phase === "reveal") && state.deadline;
-      countdown.classList.toggle("hidden", !timed);
-      if (!timed) return;
-      const seconds = Math.max(0, Math.ceil((state.deadline - Date.now()) / 1000));
-      countdown.textContent = state.phase === "reveal" ? `Next question in ${seconds}s` : `${seconds}s left`;
-      countdown.classList.toggle("urgent", state.phase === "question" && seconds <= 5);
+      const paused = isLivePhase() && state.paused;
+      countdown.classList.toggle("hidden", !timed && !paused);
+      countdown.classList.toggle("paused", Boolean(paused));
+      if (!timed && !paused) return;
+      const seconds = timed ? Math.max(0, Math.ceil((state.deadline - gameNow()) / 1000)) : 0;
+      if (paused) {
+        countdown.textContent = timed ? `Paused · ${seconds}s left` : "Paused";
+      } else {
+        countdown.textContent = state.phase === "reveal" ? `Next question in ${seconds}s` : `${seconds}s left`;
+      }
+      countdown.classList.toggle("urgent", !paused && state.phase === "question" && seconds <= 5);
     }
 
     function renderRound(roundChanged) {
+      renderPhase(roundChanged);
+      if (isLivePhase() && state.paused) {
+        document.getElementById("phase-label").textContent = "Quiz paused";
+        document.getElementById("status-text").textContent = session.role === "host"
+          ? "Timers are frozen and players can’t answer. Resume when you’re ready."
+          : "The host paused the quiz. It will pick up right where it left off.";
+      }
+    }
+
+    function syncTiming(timing) {
+      if (!timing) return;
+      document.getElementById("timing-summary").textContent = `(${timing.answerSeconds}s to answer · ${timing.revealSeconds}s break)`;
+      if (timingDirty) return;
+      document.getElementById("answer-seconds-input").value = timing.answerSeconds;
+      document.getElementById("reveal-seconds-input").value = timing.revealSeconds;
+    }
+
+    function renderPhase(roundChanged) {
       const phaseLabel = document.getElementById("phase-label");
       const questionText = document.getElementById("question-text");
       const choices = document.getElementById("choices-grid");
@@ -917,7 +994,7 @@
           }
           const mine = myPick();
           choices.querySelectorAll("button").forEach((button, index) => {
-            button.disabled = submitted;
+            button.disabled = submitted || Boolean(state.paused);
             button.classList.toggle("picked", index === mine);
             button.setAttribute("aria-pressed", String(index === mine));
             setChoiceTag(button, index === mine ? "Your pick" : "");
@@ -1113,6 +1190,73 @@
       }
     });
 
+    document.getElementById("pause-button").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      const action = state?.paused ? "resume" : "pause";
+      const error = document.getElementById("pause-error");
+      error.textContent = "";
+      setButtonLoading(button, action === "pause" ? "Pausing…" : "Resuming…");
+      try {
+        await post(`/api/games/${session.pin}/${action}`, { hostToken: session.token });
+      } catch (failure) {
+        error.textContent = failure.message;
+      } finally {
+        clearButtonLoading(button);
+        refreshNow?.();
+      }
+    });
+
+    document.getElementById("timing-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const answerInput = document.getElementById("answer-seconds-input");
+      const revealInput = document.getElementById("reveal-seconds-input");
+      const status = document.getElementById("timing-status");
+      const formError = document.getElementById("timing-error");
+      [answerInput, revealInput].forEach(clearFieldError);
+      status.textContent = "";
+      formError.textContent = "";
+      const answerSeconds = Number(answerInput.value);
+      const revealSeconds = Number(revealInput.value);
+      const valid = value => Number.isInteger(value) && value >= 5 && value <= 120;
+      if (!valid(answerSeconds)) {
+        setFieldError(answerInput, "Enter a whole number of seconds from 5 to 120.");
+        answerInput.focus();
+        return;
+      }
+      if (!valid(revealSeconds)) {
+        setFieldError(revealInput, "Enter a whole number of seconds from 5 to 120.");
+        revealInput.focus();
+        return;
+      }
+      const button = event.currentTarget.querySelector("button");
+      setButtonLoading(button, "Saving timing…");
+      try {
+        await post(`/api/games/${session.pin}/timing`, { hostToken: session.token, answerSeconds, revealSeconds });
+        timingDirty = false;
+        state.timing = { answerSeconds, revealSeconds };
+        syncTiming(state.timing);
+        status.textContent = `Saved. Players get ${answerSeconds} seconds to answer, with a ${revealSeconds}-second break between questions.`;
+      } catch (error) {
+        if (error.status === 400) {
+          const input = /answer time/i.test(error.message) ? answerInput : revealInput;
+          setFieldError(input, error.message);
+          input.focus();
+        } else {
+          formError.textContent = error.message;
+        }
+      } finally {
+        clearButtonLoading(button);
+      }
+    });
+
+    for (const id of ["answer-seconds-input", "reveal-seconds-input"]) {
+      document.getElementById(id).addEventListener("input", event => {
+        timingDirty = true;
+        clearFieldError(event.currentTarget);
+        document.getElementById("timing-status").textContent = "";
+      });
+    }
+
     document.getElementById("start-button").addEventListener("click", async () => {
       const button = document.getElementById("start-button");
       setButtonLoading(button, "Starting game…");
@@ -1243,9 +1387,9 @@
       const COACH = {
         join: ["Join", "<strong>Join like a player.</strong> Players open the game link, enter the host's 6-digit PIN and pick a nickname. The PIN is already filled in here."],
         lobby: ["Lobby", "<strong>Wait in the lobby.</strong> Other players are joining. In a real game the host presses Start; here it starts by itself."],
-        question: [null, "<strong>Pick an answer before time runs out.</strong> You get one try. The real game gives you 30 seconds; this practice round uses 15."],
+        question: [null, "<strong>Pick an answer before time runs out.</strong> You get one try. In a real game the host sets the answer time (30 seconds by default); this practice round uses 15."],
         race: ["Race", "<strong>Watch the race.</strong> Each lane is one answer, A to D. The racer in the correct answer's lane wins."],
-        reveal: ["Reveal", "<strong>See the answer.</strong> Correct answers earn 100 points and the leaderboard updates. The real game pauses 25 seconds before the next question."],
+        reveal: ["Reveal", "<strong>See the answer.</strong> Correct answers earn 100 points and the leaderboard updates. In a real game the host sets how long this break lasts (25 seconds by default)."],
         finished: ["Final", "<strong>That's the whole game.</strong> A real quiz runs the host's questions the same way: answer, race, reveal, repeat."]
       };
 

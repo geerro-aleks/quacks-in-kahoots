@@ -175,6 +175,165 @@
       animation: loading-spin .7s linear infinite;
     }
     @keyframes loading-spin { to { transform: rotate(360deg); } }
+
+    /* Demo: "Wanna see how it works?" */
+    .demo {
+      --parchment: #f8f0da; --parchment-card: #fffaf0; --parchment-edge: #e2d3a8; --parchment-line: #a8935a;
+      --tok-leaf: #1f7a3a; --tok-pumpkin: #f08a24; --tok-dew: #5cb3f0; --pot: #1c2150;
+      overflow: hidden;
+    }
+    .demo-toggle {
+      display: flex; align-items: center; gap: .875rem; width: 100%; min-height: 72px; padding: 1rem 1.25rem;
+      border: 0; background: var(--sun-yellow); color: var(--ink); text-align: left; cursor: pointer;
+      touch-action: manipulation; transition: background-color 150ms ease;
+    }
+    .demo-toggle:focus-visible { outline-offset: -6px; }
+    @media (hover: hover) and (pointer: fine) { .demo-toggle:hover { background: #f3c01f; } }
+    .demo-toggle-icon { flex-shrink: 0; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--ink); color: var(--sun-yellow); }
+    .demo-toggle-title { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1.15; }
+    .demo-toggle-sub { display: block; margin-top: .125rem; font-size: .875rem; color: #3a3935; }
+    .demo-chevron {
+      width: .625rem; height: .625rem; flex-shrink: 0; margin: 0 .25rem 0 auto;
+      border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translateY(-2px); transition: transform 200ms var(--ease-out);
+    }
+    .demo.is-open .demo-chevron { transform: rotate(-135deg) translateY(-2px); }
+    .demo-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms var(--ease-out); }
+    .demo.is-open .demo-body { grid-template-rows: 1fr; }
+    .demo-body-inner { overflow: hidden; min-height: 0; }
+    .demo-content {
+      padding: 1rem; background: var(--parchment); border-top: 2px solid var(--parchment-edge);
+      opacity: 0; transform: translateY(-6px); transition: opacity 240ms ease, transform 320ms var(--ease-out);
+    }
+    .demo.is-open .demo-content { opacity: 1; transform: none; }
+    @media (min-width: 640px) { .demo-content { padding: 1.5rem; } }
+
+    .demo-coachbar { display: flex; align-items: flex-start; gap: .75rem; padding: .75rem .875rem; border-radius: 12px; background: var(--parchment-card); border: 1px solid var(--parchment-edge); }
+    .demo-coach { flex: 1; min-width: 0; font-size: .9375rem; line-height: 1.45; }
+    .demo-pill { flex-shrink: 0; padding: .125rem .625rem; border-radius: 999px; background: var(--royal-blue); color: #fff; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+    .demo-score { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+    .score-chip { display: inline-flex; gap: .5rem; align-items: baseline; padding: .25rem .75rem; border-radius: 999px; background: var(--parchment-card); border: 1px solid var(--parchment-edge); font-size: .875rem; }
+    .score-chip b { font-weight: 700; }
+    .score-chip span { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+    .demo-stage { margin-top: 1rem; }
+    .demo-title { font-size: 1.375rem; font-weight: 800; line-height: 1.2; }
+    .demo-actions { display: flex; flex-direction: column; gap: .75rem; margin-top: 1rem; }
+    @media (min-width: 640px) { .demo-actions.row { flex-direction: row; } .demo-actions.row > * { flex: 1; } }
+
+    /* Kahoots call */
+    .rivals { display: grid; gap: .75rem; margin-top: 1rem; }
+    @media (min-width: 640px) { .rivals { grid-template-columns: 1fr 1fr; } }
+    .rival { padding: .75rem; border-radius: 14px; background: var(--parchment-card); border: 1px solid var(--parchment-edge); }
+    .rival-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
+    .avatar { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; flex-shrink: 0; border-radius: 999px; border: 2px solid var(--ink); font-family: var(--font-display); font-weight: 800; }
+    .call-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .call { display: block; cursor: pointer; }
+    .call span {
+      display: flex; align-items: center; justify-content: center; min-height: 48px; padding: .5rem .5rem; border-radius: 12px;
+      border: 2px solid var(--parchment-line); background: var(--parchment-card); font-weight: 700; font-size: .9375rem; text-align: center;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 160ms var(--ease-out);
+    }
+    .call:active span { transform: scale(.97); }
+    .call input:checked + span { background: var(--royal-blue); border-color: var(--royal-blue); color: #fff; }
+    .call input:checked + span::before {
+      content: ""; width: .4rem; height: .75rem; margin-right: .5rem; border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translateY(-2px);
+    }
+    .call input:focus-visible + span { outline: 3px solid var(--royal-blue); outline-offset: 2px; }
+
+    /* Tokens */
+    .tok {
+      display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; flex-shrink: 0;
+      width: 44px; height: 44px; border-radius: 999px; border: 3px solid var(--ink); background: #fff; color: var(--ink);
+      box-shadow: 0 2px 4px rgba(23, 23, 23, .25); line-height: 1;
+    }
+    .tok svg { width: 18px; height: 18px; }
+    .tok b { font-family: var(--font-display); font-weight: 800; font-size: .75rem; font-variant-numeric: tabular-nums; }
+    .tok-big { border-width: 4px; background: #e6eafd; }
+    .tok-leaf { background: var(--tok-leaf); color: #fff; }
+    .tok-pumpkin { background: var(--tok-pumpkin); }
+    .tok-dew { background: var(--tok-dew); }
+    .tok.calmed { opacity: .45; filter: grayscale(.6); }
+
+    /* Brew */
+    .brew { display: grid; gap: 1rem; margin-top: .75rem; }
+    .meter-label { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; margin-bottom: .375rem; font-weight: 700; }
+    .meter-label b { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+    .mood { font-size: .875rem; font-weight: 700; }
+    .meter { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 20px; }
+    .seg { border-radius: 6px; background: #eadfbd; border: 1.5px solid var(--parchment-line); transition: background-color 200ms ease, border-color 200ms ease; }
+    .seg.boom { border-style: dashed; border-color: var(--danger); }
+    .seg.on { background: var(--tok-dew); border-color: var(--ink); }
+    .meter-wrap[data-mood="bubbling"] .seg.on { background: var(--sun-yellow); }
+    .meter-wrap[data-mood="danger"] .seg.on { background: var(--tok-pumpkin); }
+    .meter-wrap[data-mood="boom"] .seg.on { background: #d92d20; }
+    .meter-hint { margin-top: .375rem; font-size: .8125rem; color: var(--ink-soft); }
+    .board { display: grid; gap: 1rem; }
+    @media (min-width: 640px) { .board { grid-template-columns: 1fr 190px; align-items: stretch; } }
+    .cauldron-card { --brew: #5cb3f0; position: relative; padding: .75rem; border-radius: 14px; background: var(--parchment-card); border: 2px solid var(--ink); }
+    .cauldron-card[data-mood="bubbling"] { --brew: #f7cb35; }
+    .cauldron-card[data-mood="danger"] { --brew: #f08a24; }
+    .cauldron-card[data-mood="boom"] { --brew: #d92d20; border-color: #d92d20; }
+    .pot { display: block; width: 100%; max-width: 210px; margin: 0 auto; }
+    .pot-liquid { fill: var(--brew); transition: fill 250ms ease; }
+    .bubble { fill: #fff; opacity: 0; transform-box: fill-box; transform-origin: center; animation: bubble 2.6s ease-in infinite; animation-play-state: paused; }
+    .demo.is-open .bubble { animation-play-state: running; }
+    .bubble.b2 { animation-delay: .9s; } .bubble.b3 { animation-delay: 1.7s; }
+    .cauldron-card[data-mood="danger"] .bubble { animation-duration: 1.4s; }
+    @keyframes bubble { 0% { transform: translateY(8px) scale(.6); opacity: 0; } 25% { opacity: .85; } 100% { transform: translateY(-16px) scale(1); opacity: 0; } }
+    .burst { position: absolute; left: 50%; top: 34%; width: 0; height: 0; pointer-events: none; }
+    .spark { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 999px; border: 2px solid var(--ink); }
+    .track-head { display: flex; justify-content: space-between; gap: .5rem; margin: .5rem 0 .375rem; font-size: .875rem; font-weight: 700; }
+    .track-head span { font-variant-numeric: tabular-nums; }
+    .track { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+    .slot { aspect-ratio: 1; display: grid; place-items: center; border-radius: 999px; border: 2px solid transparent; }
+    .slot:empty { border: 2px dashed var(--parchment-line); }
+    .slot.next { border: 2px solid var(--royal-blue); }
+    .slot .tok { width: 100%; height: 100%; }
+    .bag-card { order: -1; display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: .875rem; padding: .75rem; border-radius: 14px; background: var(--parchment-card); border: 2px dashed var(--parchment-line); }
+    .bag { width: 96px; transform-origin: 50% 18%; }
+    .bag-info { display: grid; gap: .375rem; min-width: 0; }
+    .bag-actions { display: grid; gap: .5rem; margin-top: .25rem; }
+    .bag-actions .btn { width: 100%; padding: .625rem 1rem; }
+    @media (min-width: 640px) {
+      .bag-card { order: 0; grid-template-columns: 1fr; justify-items: center; text-align: center; }
+      .bag { width: 104px; }
+      .bag-info { width: 100%; }
+    }
+    @media (hover: hover) and (pointer: fine) { .brew:has(.btn-draw:hover:not(:disabled)) .bag { animation: bag-wiggle 420ms var(--ease-out); } }
+    @keyframes bag-wiggle { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-6deg); } 65% { transform: rotate(5deg); } }
+    .bag-left { font-size: .875rem; }
+    .bag-left b { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+    .odds { font-size: .875rem; font-weight: 600; }
+    .odds[data-level="high"] { color: var(--danger); }
+    .brew-log { min-height: 2.5rem; font-size: .9375rem; line-height: 1.45; }
+    .legend { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+    @media (min-width: 640px) { .legend { grid-template-columns: 1fr 1fr; } }
+    .legend li { display: flex; align-items: center; gap: .625rem; font-size: .875rem; line-height: 1.35; }
+    .legend .tok { width: 34px; height: 34px; border-width: 2px; }
+    .legend .tok svg { width: 14px; height: 14px; } .legend .tok b { font-size: .6875rem; }
+
+    /* Results, shop, summary */
+    .results { display: grid; gap: .5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+    .results li, .shop-item { padding: .75rem .875rem; border-radius: 12px; background: var(--parchment-card); border: 1px solid var(--parchment-edge); animation: rise 360ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 60ms); }
+    .results li.win { border-color: var(--online); background: #eef8f0; }
+    .shop { display: grid; gap: .5rem; margin-top: 1rem; }
+    .shop-item { display: flex; align-items: center; gap: .75rem; }
+    .shop-item .grow { flex: 1; min-width: 0; font-size: .9375rem; }
+    .shop-item .btn { min-height: 44px; padding: .5rem 1rem; }
+    .standings { display: grid; gap: .5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+    .standings li { display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: .75rem; padding: .625rem .875rem; border-radius: 12px; background: var(--parchment-card); border: 1px solid var(--parchment-edge); animation: rise 360ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms); }
+    .standings li.you { border-color: var(--royal-blue); background: var(--royal-blue-tint); }
+    .standings .rank { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; font-weight: 700; font-size: .875rem; }
+    .standings li:first-child .rank { background: var(--sun-yellow); }
+    .standings .vp { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+    @media (prefers-reduced-motion: reduce) {
+      .demo-body { transition: none; }
+      .demo-content { transform: none; }
+      .bubble { animation: none; opacity: 0; }
+      .brew:has(.btn-draw:hover) .bag { animation: none; }
+      .results li, .standings li, .shop-item { animation-name: fade; animation-duration: 200ms; }
+      .call:active span { transform: none; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .loading-spinner { animation-duration: 1.8s; }
       .screen, .is-final .board-row { animation-name: fade; animation-duration: 200ms; }
@@ -219,6 +378,31 @@
         <p id="entry-error" class="field-error" role="alert"></p>
         <p class="muted text-sm">Players can join from any internet connection using the link and PIN, even after the quiz starts. If a question is underway, latecomers can answer if its timer is still running; otherwise, they join the next question.</p>
       </form>
+
+      <div id="demo" class="demo panel">
+        <button id="demo-toggle" class="demo-toggle" type="button" aria-expanded="false" aria-controls="demo-body">
+          <span class="demo-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16"/><path d="M5 9c0 6 2.5 10 7 10s7-4 7-10"/><path d="M8 19l-1 2M16 19l1 2"/><path d="M9 5.5c0-1 1-1.5 1-2.5M14 5.5c0-1 1-1.5 1-2.5"/></svg>
+          </span>
+          <span>
+            <span class="demo-toggle-title">Wanna see how it works?</span>
+            <span class="demo-toggle-sub">Try a two-round practice brew. No login needed.</span>
+          </span>
+          <span class="demo-chevron" aria-hidden="true"></span>
+        </button>
+        <div id="demo-body" class="demo-body" role="region" aria-labelledby="demo-toggle" inert>
+          <div class="demo-body-inner">
+            <div class="demo-content">
+              <div class="demo-coachbar">
+                <p id="demo-coach" class="demo-coach" role="status" aria-live="polite"></p>
+                <span id="demo-round" class="demo-pill"></span>
+              </div>
+              <dl id="demo-score" class="demo-score" aria-label="Demo scores"></dl>
+              <div id="demo-stage" class="demo-stage"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <details class="disclosure panel px-5 sm:px-7 py-4">
         <summary class="font-semibold min-h-[32px]">Hosting this quiz?</summary>
@@ -991,6 +1175,547 @@
     setInterval(() => {
       if (state) renderCountdown();
     }, 250);
+  </script>
+
+  <script>
+    /* "Wanna see how it works?" — a self-contained, client-side practice brew. No network calls. */
+    (() => {
+      const $ = (selector, scope = document) => scope.querySelector(selector);
+      const root = $("#demo");
+      const toggle = $("#demo-toggle");
+      const body = $("#demo-body");
+      const stage = $("#demo-stage");
+      const coach = $("#demo-coach");
+      const roundPill = $("#demo-round");
+      const scoreboard = $("#demo-score");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+      const SAFE_RISK = 7;
+      const ROUNDS = 2;
+      const CALL_BONUS = 3;
+      const COMBO_BONUS = 1;
+      const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+      const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+      const GLYPH = {
+        fizz: svg('<circle cx="7.5" cy="16" r="3.5"/><circle cx="16.5" cy="16" r="3.5"/><circle cx="12" cy="7.5" r="3"/>'),
+        big: svg('<circle cx="7.5" cy="16" r="3.5"/><circle cx="16.5" cy="16" r="3.5"/><circle cx="12" cy="7.5" r="3"/>'),
+        leaf: svg('<path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14z"/><path d="M5 19l8-8"/>'),
+        pumpkin: svg('<circle cx="12" cy="13" r="7"/><path d="M12 6c0-2 1-3 3-3"/><path d="M9 7c1 4 1 9 0 12M15 7c-1 4-1 9 0 12"/>'),
+        dew: svg('<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z"/>')
+      };
+      const TOKENS = {
+        fizz: { name: "Fizz", risk: 1, pts: 0 },
+        big: { name: "Big Fizz", risk: 2, pts: 0 },
+        leaf: { name: "Leaf", risk: 0, pts: 1 },
+        pumpkin: { name: "Pumpkin", risk: 0, pts: 2 },
+        dew: { name: "Dew", risk: 0, pts: 1, cools: true }
+      };
+      const BASE_BAG = { fizz: 6, big: 2, leaf: 4, pumpkin: 3, dew: 2 };
+      const SHOP = [{ type: "leaf", cost: 2 }, { type: "pumpkin", cost: 4 }, { type: "dew", cost: 5 }];
+      const RIVALS = {
+        daffy: { name: "Daffy", style: "Cautious", note: "Usually stops early", stopAt: 6, greed: 0.3, bg: "#1738e8", fg: "#ffffff" },
+        mallory: { name: "Mallory", style: "Daring", note: "Loves to push her luck", stopAt: 6, greed: 0.8, bg: "#f7cb35", fg: "#171717" }
+      };
+
+      const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+      const points = n => plural(n, "point");
+      const rand = n => Math.floor(Math.random() * n);
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, reduceMotion.matches ? Math.min(ms, 60) : ms));
+      const shuffle = list => {
+        for (let i = list.length - 1; i > 0; i -= 1) {
+          const j = rand(i + 1);
+          [list[i], list[j]] = [list[j], list[i]];
+        }
+        return list;
+      };
+
+      function tokenLabel(type, calmed) {
+        const def = TOKENS[type];
+        const what = def.risk
+          ? `adds ${def.risk} risk`
+          : `${points(def.pts)}${def.cools ? ", cools the last Fizz" : ""}`;
+        return `${def.name}, ${what}${calmed ? ", cooled" : ""}`;
+      }
+      function tokenHTML(type, calmed = false) {
+        const def = TOKENS[type];
+        const value = def.risk ? def.risk : `+${def.pts}`;
+        return `<span class="tok tok-${type}${calmed ? " calmed" : ""}" role="img" aria-label="${tokenLabel(type, calmed)}">${GLYPH[type]}<b>${value}</b></span>`;
+      }
+
+      function makeBag(extras) {
+        const bag = [];
+        for (const [type, count] of Object.entries(BASE_BAG)) {
+          for (let i = 0; i < count; i += 1) bag.push({ type, cooled: false });
+        }
+        for (const type of extras) bag.push({ type, cooled: false });
+        return shuffle(bag);
+      }
+
+      // Cools the most recent uncooled Fizz in `pile`; returns the risk removed.
+      function coolLastFizz(pile) {
+        for (let i = pile.length - 1; i >= 0; i -= 1) {
+          const def = TOKENS[pile[i].type];
+          if (def.risk && !pile[i].cooled) {
+            pile[i].cooled = true;
+            return def.risk;
+          }
+        }
+        return 0;
+      }
+
+      function simulateRival(profile) {
+        const bag = makeBag([]);
+        const pile = [];
+        let risk = 0;
+        let pts = 0;
+        while (bag.length) {
+          const token = bag.pop();
+          const def = TOKENS[token.type];
+          if (def.risk) {
+            risk += def.risk;
+            if (risk > SAFE_RISK) return { bust: true, pts };
+          } else {
+            pts += def.pts;
+            if (token.type === "pumpkin" && pile.at(-1)?.type === "leaf") pts += COMBO_BONUS;
+            if (def.cools) risk -= coolLastFizz(pile);
+          }
+          pile.push(token);
+          if (risk >= profile.stopAt && Math.random() > profile.greed) break;
+        }
+        return { bust: false, pts };
+      }
+
+      let S = null;
+      function fresh() {
+        return {
+          phase: "bet", round: 1, vp: 0, coins: 0, extras: [],
+          rivalVp: { daffy: 0, mallory: 0 }, rivalRun: null,
+          bet: null, calls: 0, callsRight: 0,
+          bag: [], drawn: [], risk: 0, points: 0, busy: false, log: "", result: null, bought: []
+        };
+      }
+      function beginRound() {
+        S.phase = "bet";
+        S.bet = null;
+        S.bag = makeBag(S.extras);
+        S.drawn = [];
+        S.risk = 0;
+        S.points = 0;
+        S.busy = false;
+        S.log = "Pull a token to begin.";
+        S.result = null;
+        S.rivalRun = { daffy: simulateRival(RIVALS.daffy), mallory: simulateRival(RIVALS.mallory) };
+      }
+
+      function setCoach(html) {
+        coach.innerHTML = html;
+        roundPill.textContent = `Round ${S.round} of ${ROUNDS}`;
+      }
+      function updateScore() {
+        scoreboard.innerHTML = `
+          <div class="score-chip"><dt><b>You</b></dt><dd><span>${S.vp} VP · ${S.coins} coins</span></dd></div>
+          <div class="score-chip"><dt><b>Daffy</b></dt><dd><span>${S.rivalVp.daffy} VP</span></dd></div>
+          <div class="score-chip"><dt><b>Mallory</b></dt><dd><span>${S.rivalVp.mallory} VP</span></dd></div>`;
+      }
+
+      /* ---------- Views ---------- */
+      function viewBet() {
+        setCoach("<strong>Make your Kahoots call.</strong> Pick one rival and predict how their cauldron ends. A right call earns +3 VP. It's optional, so you can also just start brewing.");
+        const card = (key, rival) => `
+          <div class="rival">
+            <div class="rival-head">
+              <span class="avatar" style="background:${rival.bg};color:${rival.fg}" aria-hidden="true">${rival.name[0]}</span>
+              <div><b>${rival.name}</b><div class="muted text-sm">${rival.style}. ${rival.note}.</div></div>
+            </div>
+            <div class="call-row">
+              <label class="call"><input class="sr-only" type="radio" name="call" value="${key}:safe"><span>Brews safely</span></label>
+              <label class="call"><input class="sr-only" type="radio" name="call" value="${key}:bust"><span>Explodes</span></label>
+            </div>
+          </div>`;
+        return `
+          <h3 class="demo-title">Round ${S.round}: make your Kahoots call</h3>
+          <fieldset class="rivals"><legend class="sr-only">Kahoots call: choose one rival and one outcome</legend>
+            ${Object.entries(RIVALS).map(([key, rival]) => card(key, rival)).join("")}
+          </fieldset>
+          <div class="demo-actions"><button type="button" class="btn btn-primary w-full text-lg" data-action="startBrew" data-autofocus>Start brewing</button></div>`;
+      }
+
+      function viewBrew() {
+        setCoach("<strong>Brew your potion.</strong> Draw tokens from the bag. White Fizz tokens add risk: go over 7 and the cauldron explodes. Stop whenever you like to bank your points.");
+        const segments = Array.from({ length: 8 }, (_, i) => `<span class="seg${i === 7 ? " boom" : ""}"></span>`).join("");
+        const legend = [
+          ["fizz", "Fizz adds risk (Big Fizz adds 2)."],
+          ["leaf", "Leaf is worth 1 point."],
+          ["pumpkin", "Pumpkin is worth 2, plus 1 bonus right after a Leaf."],
+          ["dew", "Dew is worth 1 and cools your last Fizz."]
+        ].map(([type, text]) => `<li>${tokenHTML(type)}<span>${text}</span></li>`).join("");
+        return `
+          <h3 class="demo-title">Round ${S.round}: brew your potion</h3>
+          <div class="brew">
+            <div class="meter-wrap" id="d-meter-wrap" data-mood="calm">
+              <div class="meter-label"><span>Risk <b id="d-risk">0</b> / ${SAFE_RISK}</span><span class="mood" id="d-mood">Calm</span></div>
+              <div class="meter" id="d-meter" role="meter" aria-label="Cauldron risk" aria-valuemin="0" aria-valuemax="${SAFE_RISK}" aria-valuenow="0" aria-valuetext="0 of ${SAFE_RISK}, calm">${segments}</div>
+              <p class="meter-hint">Safe up to ${SAFE_RISK}. Anything above that is boom.</p>
+            </div>
+            <div class="board">
+              <div class="cauldron-card" id="d-cauldron" data-mood="calm">
+                <svg class="pot" viewBox="0 0 200 130" aria-hidden="true">
+                  <path d="M55 110l-9 14M145 110l9 14" stroke="#171717" stroke-width="7" stroke-linecap="round"/>
+                  <path d="M22 44c0 46 28 70 78 70s78-24 78-70z" fill="var(--pot)" stroke="#171717" stroke-width="4" stroke-linejoin="round"/>
+                  <ellipse class="pot-liquid" cx="100" cy="44" rx="74" ry="13" stroke="#171717" stroke-width="3"/>
+                  <circle class="bubble b1" cx="74" cy="42" r="5"/><circle class="bubble b2" cx="104" cy="45" r="4"/><circle class="bubble b3" cx="128" cy="41" r="5"/>
+                  <path d="M38 66c4 18 14 30 30 38" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>
+                  <path d="M14 44h172" stroke="#171717" stroke-width="9" stroke-linecap="round"/>
+                  <path d="M14 44h172" stroke="#8b94d6" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <div class="burst" id="d-burst" aria-hidden="true"></div>
+                <div class="track-head"><span>In the cauldron</span><span><b id="d-points">0</b> points</span></div>
+                <ol class="track" id="d-track" aria-label="Cauldron contents"></ol>
+              </div>
+              <div class="bag-card">
+                <svg class="bag" id="d-bag" viewBox="0 0 120 130" aria-hidden="true">
+                  <path d="M40 24c-3 8-6 15-8 22-14 12-20 32-14 50 5 14 20 24 42 24s37-10 42-24c6-18 0-38-14-50-2-7-5-14-8-22z" fill="#d1ad6e" stroke="#171717" stroke-width="4" stroke-linejoin="round"/>
+                  <path d="M38 28c10 7 34 7 44 0" fill="none" stroke="#171717" stroke-width="4" stroke-linecap="round"/>
+                  <path d="M36 36c11 6 37 6 48 0" fill="none" stroke="#1738e8" stroke-width="5" stroke-linecap="round"/>
+                  <path d="M60 40c-8 4-14 10-12 16M60 40c8 4 14 10 12 16" fill="none" stroke="#1738e8" stroke-width="4" stroke-linecap="round"/>
+                  <text x="60" y="96" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-size="34" fill="#171717">?</text>
+                </svg>
+                <div class="bag-info">
+                  <p class="bag-left"><b id="d-left">0</b> tokens left</p>
+                  <p class="odds" id="d-odds"></p>
+                  <div class="bag-actions">
+                    <button type="button" class="btn btn-primary btn-draw" id="d-draw" data-action="draw" data-autofocus>Draw from bag</button>
+                    <button type="button" class="btn btn-secondary" id="d-stop" data-action="stop">Stop &amp; score</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="brew-log" id="d-log" role="status" aria-live="polite"></p>
+            <ul class="legend">${legend}</ul>
+          </div>`;
+      }
+
+      function viewBust() {
+        setCoach("<strong>Boom!</strong> A safe brew banks both Victory Points and Buying Power. An exploded one only gets one of them. Choose which.");
+        const p = S.points;
+        if (p === 0) {
+          return `
+            <h3 class="demo-title">The cauldron exploded</h3>
+            <p class="mt-2">There was nothing in the pot yet, so there's nothing to take. Next time, bank a few points before pushing your luck.</p>
+            <div class="demo-actions"><button type="button" class="btn btn-primary w-full" data-action="bustNone" data-autofocus>Continue</button></div>`;
+        }
+        return `
+          <h3 class="demo-title">The cauldron exploded</h3>
+          <p class="mt-2">You had ${points(p)} brewing. Pick one reward:</p>
+          <div class="demo-actions row">
+            <button type="button" class="btn btn-primary" data-action="bustVp" data-autofocus>Victory Points: +${p} VP</button>
+            <button type="button" class="btn btn-secondary" data-action="bustCoins">Buying Power: +${p} coins</button>
+          </div>
+          <p class="muted text-sm mt-3">Victory Points decide who wins. Buying Power lets you add stronger tokens to your bag between rounds.</p>`;
+      }
+
+      function viewResult() {
+        const r = S.result;
+        const last = S.round >= ROUNDS;
+        setCoach("<strong>Reveal.</strong> Here's how every cauldron ended and whether your call paid off.");
+        const rivalLine = key => {
+          const run = S.rivalRun[key];
+          const rival = RIVALS[key];
+          return `${rival.name} (${rival.style}): ${run.bust ? `exploded with ${points(run.pts)} and took +${run.pts} VP` : `brewed ${points(run.pts)} safely for +${run.pts} VP`}.`;
+        };
+        const lines = [`<li style="--i:0"><b>You:</b> ${r.playerText}</li>`,
+          `<li style="--i:1">${rivalLine("daffy")}</li>`,
+          `<li style="--i:2">${rivalLine("mallory")}</li>`];
+        if (r.callText) lines.push(`<li class="${r.callRight ? "win" : ""}" style="--i:3"><b>Kahoots call:</b> ${r.callText}</li>`);
+        return `
+          <h3 class="demo-title">Round ${S.round} results</h3>
+          <ul class="results">${lines.join("")}</ul>
+          <div class="demo-actions"><button type="button" class="btn btn-primary w-full" data-action="next" data-autofocus>${last ? "See final scores" : "Next: spend Buying Power"}</button></div>`;
+      }
+
+      function viewShop() {
+        setCoach("<strong>Spend Buying Power.</strong> Add a token to your bag for round 2. Stronger tokens make later brews bigger.");
+        const items = SHOP.map(({ type, cost }, i) => {
+          const def = TOKENS[type];
+          const affordable = S.coins >= cost;
+          const desc = type === "leaf" ? "1 point" : type === "pumpkin" ? "2 points, +1 after a Leaf" : "1 point, cools your last Fizz";
+          return `<li class="shop-item" style="--i:${i}">${tokenHTML(type)}<div class="grow"><b>${def.name}</b><div class="muted text-sm">${desc}</div></div>
+            <button type="button" class="btn btn-secondary" data-action="buy" data-type="${type}" ${affordable ? "" : "disabled"} aria-label="Buy ${def.name} for ${cost} coins">${cost} coins</button></li>`;
+        }).join("");
+        const bought = S.bought.length ? `Added to your bag: ${S.bought.map(t => TOKENS[t].name).join(", ")}.` : (S.coins === 0 ? "You have no Buying Power this round, so there is nothing to buy." : "Tap a token to add it to your bag.");
+        return `
+          <h3 class="demo-title">Shop: you have ${plural(S.coins, "coin")}</h3>
+          <ul class="shop">${items}</ul>
+          <p class="muted text-sm mt-3" role="status" aria-live="polite">${bought}</p>
+          <div class="demo-actions"><button type="button" class="btn btn-primary w-full" data-action="startRound2" data-autofocus>Start round ${S.round + 1}</button></div>`;
+      }
+
+      function viewSummary() {
+        const rows = [
+          { name: "You", vp: S.vp, you: true },
+          { name: "Daffy", vp: S.rivalVp.daffy },
+          { name: "Mallory", vp: S.rivalVp.mallory }
+        ].sort((a, b) => b.vp - a.vp);
+        const top = rows[0].vp;
+        const winners = rows.filter(row => row.vp === top);
+        const youTop = winners.some(row => row.you);
+        const headline = youTop ? (winners.length === 1 ? "You won the demo!" : "You tied for first!") : `${winners[0].name} won this one.`;
+        setCoach(`<strong>That's the loop:</strong> call it, brew, push or stop, then spend. ${youTop ? "Nice brewing." : "Want a rematch?"}`);
+        const callLine = S.calls ? `You called ${S.callsRight} of ${plural(S.calls, "rival result")} correctly.` : "You skipped the Kahoots calls. Next time, try one for bonus VP.";
+        return `
+          <h3 class="demo-title">${headline}</h3>
+          <ol class="standings">${rows.map((row, i) => `<li class="${row.you ? "you" : ""}" style="--i:${i}"><span class="rank">${rows.filter(other => other.vp > row.vp).length + 1}</span><span><b>${row.name}</b></span><span class="vp">${row.vp} VP</span></li>`).join("")}</ol>
+          <p class="muted text-sm mt-3">${callLine}</p>
+          <div class="demo-actions row">
+            <button type="button" class="btn btn-primary" data-action="playFull" data-autofocus>Play the full game</button>
+            <button type="button" class="btn btn-secondary" data-action="replay">Replay demo</button>
+          </div>`;
+      }
+
+      const VIEWS = { bet: viewBet, brew: viewBrew, bust: viewBust, result: viewResult, shop: viewShop, summary: viewSummary };
+      function render(userDriven = true) {
+        stage.innerHTML = VIEWS[S.phase]();
+        stage.classList.remove("screen");
+        void stage.offsetWidth;
+        stage.classList.add("screen");
+        updateScore();
+        if (S.phase === "brew") syncBrew();
+        if (userDriven) {
+          stage.querySelector("[data-autofocus]")?.focus({ preventScroll: true });
+          stage.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth" });
+        }
+      }
+
+      /* ---------- Brew state -> DOM ---------- */
+      function mood() {
+        if (S.risk > SAFE_RISK) return ["boom", "Boom!"];
+        if (S.risk >= 6) return ["danger", "About to blow"];
+        if (S.risk >= 4) return ["bubbling", "Bubbling"];
+        return ["calm", "Calm"];
+      }
+      function renderTrack() {
+        const slots = Math.max(12, S.drawn.length + 1);
+        const track = $("#d-track");
+        track.innerHTML = Array.from({ length: slots }, (_, i) => {
+          const token = S.drawn[i];
+          return `<li class="slot${i === S.drawn.length ? " next" : ""}">${token ? tokenHTML(token.type, token.cooled) : ""}</li>`;
+        }).join("");
+      }
+      function syncBrew() {
+        const [level, label] = mood();
+        $("#d-risk").textContent = S.risk;
+        $("#d-mood").textContent = label;
+        $("#d-meter-wrap").dataset.mood = level;
+        $("#d-cauldron").dataset.mood = level;
+        const meter = $("#d-meter");
+        meter.setAttribute("aria-valuenow", Math.min(S.risk, SAFE_RISK));
+        meter.setAttribute("aria-valuetext", S.risk > SAFE_RISK ? "over the limit, boom" : `${S.risk} of ${SAFE_RISK}, ${label.toLowerCase()}`);
+        meter.querySelectorAll(".seg").forEach((seg, i) => seg.classList.toggle("on", i < Math.min(S.risk, 8)));
+        $("#d-points").textContent = S.points;
+        $("#d-left").textContent = S.bag.length;
+        const risky = S.bag.filter(t => TOKENS[t.type].risk && S.risk + TOKENS[t.type].risk > SAFE_RISK).length;
+        const odds = $("#d-odds");
+        if (S.bag.length) {
+          const pct = Math.round(100 * risky / S.bag.length);
+          odds.textContent = `Next draw explodes it: ${pct}%`;
+          odds.dataset.level = pct >= 25 ? "high" : "low";
+        } else {
+          odds.textContent = "The bag is empty.";
+          odds.dataset.level = "low";
+        }
+        renderTrack();
+        $("#d-log").textContent = S.log;
+        $("#d-draw").disabled = S.busy || S.bag.length === 0;
+        $("#d-stop").disabled = S.busy;
+      }
+
+      /* ---------- Motion (visual only; state is always updated first) ---------- */
+      function animateDrop() {
+        const idx = S.drawn.length - 1;
+        const slot = $("#d-track").children[idx];
+        const tok = slot?.firstElementChild;
+        if (!tok) return;
+        if (reduceMotion.matches) {
+          tok.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+          return;
+        }
+        const from = $("#d-bag").getBoundingClientRect();
+        const to = tok.getBoundingClientRect();
+        const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+        const dy = from.top + from.height * 0.3 - (to.top + to.height / 2);
+        tok.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(.5) rotate(-40deg)`, opacity: 0 },
+          { opacity: 1, offset: 0.18 },
+          { transform: `translate(${dx * 0.06}px, ${dy * 0.06 - 14}px) scale(1.12) rotate(8deg)`, offset: 0.72 },
+          { transform: "none", opacity: 1 }
+        ], { duration: 560, easing: EASE });
+        $("#d-bag").animate([
+          { transform: "rotate(0)" }, { transform: "rotate(-9deg) translateY(-2px)" },
+          { transform: "rotate(8deg)" }, { transform: "rotate(-4deg)" }, { transform: "rotate(0)" }
+        ], { duration: 360, easing: "ease-out" });
+      }
+
+      async function boom() {
+        const card = $("#d-cauldron");
+        if (!reduceMotion.matches) {
+          card.animate([
+            { transform: "translateX(0)" }, { transform: "translateX(-9px) rotate(-1.5deg)" }, { transform: "translateX(8px) rotate(1.2deg)" },
+            { transform: "translateX(-6px)" }, { transform: "translateX(4px)" }, { transform: "translateX(0)" }
+          ], { duration: 460, easing: "ease-out" });
+          const burst = $("#d-burst");
+          const colors = ["#1738e8", "#f7cb35", "#ffffff", "#f08a24"];
+          for (let i = 0; i < 16; i += 1) {
+            const spark = document.createElement("span");
+            spark.className = "spark";
+            spark.style.background = colors[i % colors.length];
+            burst.appendChild(spark);
+            const angle = (Math.PI * 2 * i) / 16 + Math.random() * 0.3;
+            const dist = 70 + Math.random() * 60;
+            const anim = spark.animate([
+              { transform: "translate(0, 0) scale(1)", opacity: 1 },
+              { transform: `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist - 24}px) scale(.3)`, opacity: 0 }
+            ], { duration: 650, easing: "cubic-bezier(0.215, 0.61, 0.355, 1)", fill: "forwards" });
+            anim.onfinish = () => spark.remove();
+          }
+        }
+        await sleep(1000);
+      }
+
+      /* ---------- Actions ---------- */
+      async function draw() {
+        if (S.busy || S.phase !== "brew" || !S.bag.length) return;
+        const token = S.bag.pop();
+        const def = TOKENS[token.type];
+        const prev = S.drawn.at(-1);
+        S.drawn.push(token);
+        let message;
+        if (def.risk) {
+          S.risk += def.risk;
+          message = `Drew ${def.name}: +${def.risk} risk.`;
+        } else {
+          let gain = def.pts;
+          message = `Drew ${def.name}: +${points(gain)}.`;
+          if (token.type === "pumpkin" && prev?.type === "leaf") {
+            gain += COMBO_BONUS;
+            message += " Leaf then Pumpkin combo: +1 bonus!";
+          }
+          if (def.cools) {
+            const removed = coolLastFizz(S.drawn);
+            message += removed ? ` It cooled your last Fizz: risk down by ${removed}.` : " There was no Fizz to cool yet.";
+            S.risk -= removed;
+          }
+          S.points += gain;
+        }
+        const bust = S.risk > SAFE_RISK;
+        if (bust) {
+          message += " Over the limit!";
+        } else if (!S.bag.length) {
+          message += " The bag is empty, so it's time to stop.";
+        }
+        S.log = message;
+        S.busy = bust;
+        syncBrew();
+        animateDrop();
+        if (bust) {
+          await boom();
+          S.phase = "bust";
+          render();
+        }
+      }
+
+      function settle(choice) {
+        const p = S.points;
+        const gainVp = choice === "both" || choice === "vp" ? p : 0;
+        const gainCoins = choice === "both" || choice === "coins" ? p : 0;
+        S.vp += gainVp;
+        S.coins += gainCoins;
+        for (const key of Object.keys(RIVALS)) S.rivalVp[key] += S.rivalRun[key].pts;
+        let playerText;
+        if (choice === "both") playerText = p ? `brewed ${points(p)} safely for +${p} VP and +${p} coins.` : "stopped with nothing in the pot, so no rewards.";
+        else if (choice === "vp") playerText = `exploded with ${points(p)} and chose Victory Points: +${p} VP, no coins.`;
+        else if (choice === "coins") playerText = `exploded with ${points(p)} and chose Buying Power: +${p} coins, no VP.`;
+        else playerText = "exploded with nothing in the pot. No rewards.";
+        let callText = null;
+        let callRight = false;
+        if (S.bet) {
+          const rival = RIVALS[S.bet.who];
+          const actual = S.rivalRun[S.bet.who].bust ? "bust" : "safe";
+          callRight = actual === S.bet.call;
+          S.calls += 1;
+          if (callRight) { S.callsRight += 1; S.vp += CALL_BONUS; }
+          const said = S.bet.call === "bust" ? "explodes" : "brews safely";
+          callText = callRight ? `You said ${rival.name} ${said}. Correct! +${CALL_BONUS} VP.` : `You said ${rival.name} ${said}. Not this time, no bonus.`;
+        }
+        S.result = { playerText, callText, callRight };
+        S.phase = "result";
+        render();
+      }
+
+      const actions = {
+        startBrew() {
+          const picked = $('input[name="call"]:checked', stage)?.value;
+          S.bet = picked ? { who: picked.split(":")[0], call: picked.split(":")[1] } : null;
+          S.phase = "brew";
+          render();
+        },
+        draw,
+        stop() { if (!S.busy) settle("both"); },
+        bustVp() { settle("vp"); },
+        bustCoins() { settle("coins"); },
+        bustNone() { settle("none"); },
+        next() {
+          if (S.round >= ROUNDS) S.phase = "summary";
+          else { S.phase = "shop"; S.bought = []; }
+          render();
+        },
+        buy(button) {
+          const type = button.dataset.type;
+          const item = SHOP.find(entry => entry.type === type);
+          if (!item || S.coins < item.cost) return;
+          S.coins -= item.cost;
+          S.extras.push(type);
+          S.bought.push(type);
+          render(false);
+          const first = stage.querySelector(".shop-item .btn:not(:disabled)") || stage.querySelector("[data-autofocus]");
+          first?.focus({ preventScroll: true });
+        },
+        startRound2() {
+          S.round += 1;
+          beginRound();
+          render();
+        },
+        playFull() {
+          root.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+          body.inert = true;
+          const pin = document.getElementById("pin-input");
+          pin.scrollIntoView({ block: "center", behavior: reduceMotion.matches ? "auto" : "smooth" });
+          pin.focus({ preventScroll: true });
+        },
+        replay() { start(); }
+      };
+
+      stage.addEventListener("click", event => {
+        const button = event.target.closest("[data-action]");
+        if (!button || button.disabled) return;
+        actions[button.dataset.action]?.(button);
+      });
+
+      function start(userDriven = true) {
+        S = fresh();
+        beginRound();
+        render(userDriven);
+      }
+
+      toggle.addEventListener("click", () => {
+        const open = !root.classList.contains("is-open");
+        root.classList.toggle("is-open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+        body.inert = !open;
+        if (open && !S) start(false);
+      });
+    })();
   </script>
 </body>
 </html>

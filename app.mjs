@@ -603,16 +603,16 @@ export default {
       if (request.method !== "GET") return fail("Method not allowed.", 405);
       const asset = url.pathname === "/" || url.pathname === "/index.html"
         ? "index.html"
-        : url.pathname === "/assets/race-character.png"
-          ? "assets/race-character.png"
+        : url.pathname === "/assets/rubber-duck.svg"
+          ? "assets/rubber-duck.svg"
           : null;
       if (!asset) return fail("Not found.", 404);
       const content = await fs.readFile(path.join(root, asset));
-      const type = asset.endsWith(".png") ? "image/png" : "text/html; charset=utf-8";
+      const type = asset.endsWith(".svg") ? "image/svg+xml" : "text/html; charset=utf-8";
       return new Response(content, {
         headers: {
           "Content-Type": type,
-          "Cache-Control": asset.endsWith(".png") ? "public, max-age=86400" : "no-store"
+          "Cache-Control": asset.endsWith(".svg") ? "public, max-age=86400" : "no-store"
         }
       });
     } catch (error) {

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="120" height="100">
+  <title>Rubber duck racer</title>
+  <g stroke="#171717" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M8 50c5 6 12 9 20 9 4-8 14-12 26-10 12 2 24 2 32 1 18-1 27 12 23 26-4 14-22 22-48 22-28 0-44-9-49-24-3-8-4-16-4-24z" fill="#f7cb35"/>
+    <circle cx="80" cy="32" r="22" fill="#f7cb35"/>
+    <path d="M99 28c9-2 17 0 19 5-2 6-11 8-20 6z" fill="#f08a24"/>
+    <path d="M99 36c6 1 12 0 16-2" fill="none"/>
+    <path d="M40 67c10-9 28-8 35 3-6 10-25 12-35 4z" fill="#eab308"/>
+  </g>
+  <circle cx="86" cy="26" r="4.2" fill="#171717"/>
+  <circle cx="87.4" cy="24.6" r="1.4" fill="#ffffff"/>
+  <path d="M66 18c3-5 9-7 14-6" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  <path d="M22 72c4 8 14 13 26 15" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+</svg>
